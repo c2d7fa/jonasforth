@@ -8,6 +8,9 @@ JONESFORTH:
 
 # Notes on implementation
 
+This is my summary of the most important parts of
+https://raw.githubusercontent.com/nornagon/jonesforth/master/jonesforth.S.
+
 ## Dictionary
 
 In Forth, words are stored in a dictionary. The dictionary is a linked list whose entries look like this:
@@ -32,4 +35,27 @@ For example, DOUBLE and QUADRUPLE may be stored like this:
        |
   LATEST
 The Forth variable LATEST contains a pointer to the most recently defined word.
+
+## Threaded code
+
+In a typical Forth interpreter, code is stored in a peculiar way. (This way of
+storing code is primarily motivated by space contraints on early systems.)
+
+The definition of a word is stored as a sequence of memory adresses of each of
+the words making up that definition. (At the end of a compiled definition, there
+is also some extra code that causes execution to continue in the correct way.)
+
+We use a register (ESI) to store a reference to the next index of the
+word (inside a definition) that we are executing. Then, in order to execute a
+word, we just jump to whatever address is pointed to by ESI. The code for
+updating ESI and continuing execution is stored at the end of each subroutine.
+
+Of course, this approach only works if each of the words that we are executing
+is defined in assembly, but we also want to be able to execute Forth words!
+
+We get around this problem by adding a "codeword" to the beginning of any
+compiled subroutine. This codeword is a pointer to the intrepreter to run the
+given function. In order to run such functions, we actually need two jumps when
+executing: In order to execute a word, we jump to the address at the location
+pointed to by the address in ESI.
 
