@@ -5,3 +5,31 @@ FASM:
 
 JONESFORTH:
 - https://github.com/nornagon/jonesforth/blob/master/jonesforth.S
+
+# Notes on implementation
+
+## Dictionary
+
+In Forth, words are stored in a dictionary. The dictionary is a linked list whose entries look like this:
+    +------------------------+--------+---------- - - - - +----------- - - - -
+    | LINK POINTER           | LENGTH/| NAME              | DEFINITION
+    |                        | FLAGS  |                   |
+    +--- (4 bytes) ----------+- byte -+- n bytes  - - - - +----------- - - - -
+For example, DOUBLE and QUADRUPLE may be stored like this:
+      pointer to previous word
+       ^
+       |
+    +--|------+---+---+---+---+---+---+---+---+------------- - - - -
+    | LINK    | 6 | D | O | U | B | L | E | 0 | (definition ...)
+    +---------+---+---+---+---+---+---+---+---+------------- - - - -
+       ^       len                         padding
+       |
+    +--|------+---+---+---+---+---+---+---+---+---+---+---+---+------------- - - - -
+    | LINK    | 9 | Q | U | A | D | R | U | P | L | E | 0 | 0 | (definition ...)
+    +---------+---+---+---+---+---+---+---+---+---+---+---+---+------------- - - - -
+       ^       len                                     padding
+       |
+       |
+  LATEST
+The Forth variable LATEST contains a pointer to the most recently defined word.
+
