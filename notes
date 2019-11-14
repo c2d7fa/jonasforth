@@ -90,3 +90,10 @@ Here, DOCOL (the codeword) is address of the simple interpreter described above,
 while EXIT a word (implemented in assembly) that takes care of popping ESI and
 continuing execution. Note that DOCOL, DUP, + and EXIT are all stored as
 addresses which point to codewords.
+
+## Literals
+
+Literals are handled in a special way. There is a word in Forth, called LIT,
+implemented in assembly. When executed, this word looks at the next Forth
+instruction (i.e. the value of ESI), and places that on the stack as a literal,
+and then manipulates ESI to skip over the literal value.
