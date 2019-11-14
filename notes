@@ -59,3 +59,34 @@ given function. In order to run such functions, we actually need two jumps when
 executing: In order to execute a word, we jump to the address at the location
 pointed to by the address in ESI.
 
+## Definitions
+
+What does the codeword of a Forth word contain? It needs to save the old value
+of ESI (so that we can resume execution of whatever outer definition we are
+executing at the time) and set the new version of ESI to point to the first word
+in the inner definition.
+
+The stack where the values of ESI are stored is called the "return stack". We
+will use EBP for the return stack.
+
+As mentioned, whenever we finish executing a Forth word, we will need to
+continue execution in the manner described in the previous section. When the
+word being executed is itself written in Forth, we need to pop the old value of
+ESI that we saved at the beginning of the definition before doing this.
+
+Thus, the actual data for a word in a dictionary will look something like this:
+
+      pointer to previous word
+       ^
+       |
+    +--|------+---+---+---+---+---+---+---+---+------------+------------+------------+------------+
+    | LINK    | 6 | D | O | U | B | L | E | 0 | DOCOL      | DUP        | +          | EXIT       |
+    +---------+---+---+---+---+---+---+---+---+------------+--|---------+------------+------------+
+       ^       len                         pad  codeword      |
+       |                                                      V
+      LINK in next word                            points to codeword of DUP
+
+Here, DOCOL (the codeword) is address of the simple interpreter described above,
+while EXIT a word (implemented in assembly) that takes care of popping ESI and
+continuing execution. Note that DOCOL, DUP, + and EXIT are all stored as
+addresses which point to codewords.
