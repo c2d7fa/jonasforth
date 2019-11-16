@@ -16,7 +16,7 @@ macro next {
 ;; register RBP.
 macro pushr x {
     sub rbp, 8
-    mov [rbp], x
+    mov qword [rbp], x
 }
 macro popr x {
     mov x, [rbp]
@@ -25,13 +25,73 @@ macro popr x {
 
 segment readable executable
 
-start:
-    ;; Initialize return stack
-    mov rbp, return_stack_top
+main:
+    cld                        ; Clear direction flag so LODSQ does the right thing.
+    mov rbp, return_stack_top  ; Initialize return stack
 
-    jmp $
+    mov rsi, program
+    next
 
-segment readable
+program:
+    dq HELLO
+
+;; The codeword is the code that will be executed at the beginning of a forth
+;; word. It needs to save the old RSI and update it to point to the next word to
+;; execute.
+docol:
+    pushr rsi            ; Save old value of RSI on return stack; we will continue execution there after we are done executing this word
+    lea rsi, [rax + 8]   ; RAX currently points to the address of the codeword, so we want to continue at RAX+8
+    next                 ; Execute word pointed to by RSI
+
+;; This codeword is called at the end of a Forth definition. It just needs to
+;; restore the old value of RSI (saved by 'docol') and resume execution.
+exit:
+    popr rsi
+    next
+
+EMIT:
+    dq .start
+.start:
+    pushr rsi
+    pushr rax
+    mov rax, 1
+    mov rdi, 1
+    lea rsi, [rsp]
+    mov rdx, 1
+    syscall
+    add rsp, 8
+    popr rax
+    popr rsi
+    next
+
+PUSH_HELLO_CHARS:
+    dq .start
+.start:
+    push $A
+    push 'o'
+    push 'l'
+    push 'l'
+    push 'e'
+    push 'H'
+    next
+
+HELLO:
+    dq docol
+    dq PUSH_HELLO_CHARS
+    dq EMIT
+    dq EMIT
+    dq EMIT
+    dq EMIT
+    dq EMIT
+    dq EMIT
+    dq exit
+
+PROGRAM:
+    dq docol
+    dq HELLO
+    dq HELLO
+    dq HELLO
+    dq exit
 
 segment readable writable
 
