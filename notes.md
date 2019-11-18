@@ -14,11 +14,14 @@ https://raw.githubusercontent.com/nornagon/jonesforth/master/jonesforth.S.
 ## Dictionary
 
 In Forth, words are stored in a dictionary. The dictionary is a linked list whose entries look like this:
+
     +------------------------+--------+---------- - - - - +----------- - - - -
     | LINK POINTER           | LENGTH/| NAME              | DEFINITION
     |                        | FLAGS  |                   |
     +--- (4 bytes) ----------+- byte -+- n bytes  - - - - +----------- - - - -
+
 For example, DOUBLE and QUADRUPLE may be stored like this:
+
       pointer to previous word
        ^
        |
@@ -33,7 +36,8 @@ For example, DOUBLE and QUADRUPLE may be stored like this:
        ^       len                                     padding
        |
        |
-  LATEST
+    LATEST
+
 The Forth variable LATEST contains a pointer to the most recently defined word.
 
 ## Threaded code
