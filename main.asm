@@ -32,8 +32,7 @@ main:
     mov rsi, program
     next
 
-program:
-    dq HELLO
+program: dq MAIN
 
 ;; The codeword is the code that will be executed at the beginning of a forth
 ;; word. It needs to save the old RSI and update it to point to the next word to
@@ -43,9 +42,11 @@ docol:
     lea rsi, [rax + 8]   ; RAX currently points to the address of the codeword, so we want to continue at RAX+8
     next                 ; Execute word pointed to by RSI
 
-;; This codeword is called at the end of a Forth definition. It just needs to
+;; This word is called at the end of a Forth definition. It just needs to
 ;; restore the old value of RSI (saved by 'docol') and resume execution.
-exit:
+EXIT:
+    dq .start
+.start:
     popr rsi
     next
 
@@ -84,7 +85,21 @@ HELLO:
     dq EMIT
     dq EMIT
     dq EMIT
-    dq exit
+    dq EXIT
+
+TERMINATE:
+    dq .start
+.start:
+    mov rax, $3C
+    mov rdi, 0
+    syscall
+
+MAIN:
+    dq docol
+    dq HELLO
+    dq HELLO
+    dq HELLO
+    dq TERMINATE
 
 segment readable writable
 
