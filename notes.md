@@ -101,3 +101,11 @@ Literals are handled in a special way. There is a word in Forth, called LIT,
 implemented in assembly. When executed, this word looks at the next Forth
 instruction (i.e. the value of ESI), and places that on the stack as a literal,
 and then manipulates ESI to skip over the literal value.
+
+## Built-in variables
+
+* **STATE** -- Is the interpreter executing code (0) or compiling a word (non-zero)?
+* **LATEST** -- Points to the latest (most recently defined) word in the dictionary.
+* **HERE** -- Points to the next free byte of memory.  When compiling, compiled words go here.
+* **S0** -- Stores the address of the top of the parameter stack.
+* **BASE** -- The current base for printing and reading numbers.
