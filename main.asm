@@ -86,13 +86,6 @@ HELLO:
     dq EMIT
     dq exit
 
-PROGRAM:
-    dq docol
-    dq HELLO
-    dq HELLO
-    dq HELLO
-    dq exit
-
 segment readable writable
 
 ;; Return stack
