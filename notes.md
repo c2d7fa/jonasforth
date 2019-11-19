@@ -109,3 +109,41 @@ and then manipulates ESI to skip over the literal value.
 * **HERE** -- Points to the next free byte of memory.  When compiling, compiled words go here.
 * **S0** -- Stores the address of the top of the parameter stack.
 * **BASE** -- The current base for printing and reading numbers.
+
+## Input and lookup
+
+`WORD` reads a word from standard input and pushes a string (in the form of an
+address followed by the length of the string) to the stack. (It uses an internal
+buffer that is overwritten each time it is called.)
+
+`FIND` takes a word as parsed by `WORD` and looks it up in the dictionary. It
+returns the address of the dictionary header of that word if it is found.
+Otherwise, it returns 0.
+
+`>CFA` turns a dictionary pointer into a codeword pointer. This is used when
+compiling.
+
+## Compilation
+
+The Forth word INTERPRET runs in a loop, reading in words (with WORD), looking
+them up (with FIND), turning them into codeword pointers (with >CFA) and then
+deciding what to do with them.
+
+In immediate mode (when STATE is zero), the word is simply executed immediately.
+
+In compilation mode, INTERPRET appends the codeword pointer to user memory
+(which is at HERE). However, if a word has the immediate flag set, then it is
+run immediately, even in compile mode.
+
+### Definition of `:` and `;`
+
+The word `:` starts by reading in the new word. Then it creates a new entry for
+that word in the dictoinary, updating the contents of `LATEST`, to which it
+appends the word `DOCOL`. Then, it switches to compile mode.
+
+The word `;` simply appends `EXIT` to the currently compiling definition and
+then switches back to immediate mode.
+
+These words rely on `,` to append words to the currently compiling definition.
+This word simply appends some literal value to `HERE` and moves the `HERE`
+pointer forward.
