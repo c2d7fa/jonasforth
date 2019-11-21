@@ -50,6 +50,15 @@ EXIT:
   popr rsi
   next
 
+;; LIT is a special word that reads the next "word pointer" and causes it to be
+;; placed on the stack rather than executed.
+LIT:
+  dq .start
+.start:
+  lodsq
+  push rax
+  next
+
 EMIT:
   dq .start
 .start:
@@ -65,15 +74,9 @@ EMIT:
   popr rsi
   next
 
-PUSH_NEWLINE_CHAR:
-  dq .start
-.start:
-  push $A
-  next
-
 NEWLINE:
   dq docol
-  dq PUSH_NEWLINE_CHAR
+  dq LIT, $A
   dq EMIT
   dq EXIT
 
@@ -148,15 +151,14 @@ TYPE:
   next
 
 PUSH_HELLO_CHARS:
-  dq .start
-.start:
-  push $A
-  push 'o'
-  push 'l'
-  push 'l'
-  push 'e'
-  push 'H'
-  next
+  dq docol
+  dq LIT, $A
+  dq LIT, 'o'
+  dq LIT, 'l'
+  dq LIT, 'l'
+  dq LIT, 'e'
+  dq LIT, 'H'
+  dq EXIT
 
 PUSH_YOU_TYPED:
   dq .start
@@ -167,18 +169,18 @@ PUSH_YOU_TYPED:
 
 HELLO:
   dq docol
-  dq PUSH_HELLO_CHARS
-  dq EMIT
-  dq EMIT
-  dq EMIT
-  dq EMIT
-  dq EMIT
-  dq EMIT
+  dq LIT, 'H', EMIT
+  dq LIT, 'e', EMIT
+  dq LIT, 'l', EMIT
+  dq LIT, 'l', EMIT
+  dq LIT, 'o', EMIT
+  dq LIT, '!', EMIT
+  dq NEWLINE
   dq EXIT
 
 TERMINATE:
   dq .start
-  .start:
+.start:
   mov rax, $3C
   mov rdi, 0
   syscall
@@ -187,7 +189,8 @@ MAIN:
   dq docol
   dq HELLO
   dq READ_WORD
-  dq PUSH_YOU_TYPED
+  dq LIT, you_typed_string
+  dq LIT, you_typed_string.length
   dq TYPE
   dq TYPE
   dq NEWLINE
