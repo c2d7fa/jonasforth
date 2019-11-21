@@ -59,6 +59,7 @@ LIT:
   push rax
   next
 
+;; Expects a character on the stack and prints it to standard output.
 EMIT:
   dq .start
 .start:
@@ -74,6 +75,7 @@ EMIT:
   popr rsi
   next
 
+;; Prints a newline to standard output.
 NEWLINE:
   dq docol
   dq LIT, $A
@@ -134,6 +136,8 @@ READ_WORD:  ; 400170
 
   next
 
+;; Takes a string (in the form of a pointer and a length on the stack) and
+;; prints it to standard output.
 TYPE:
   dq .start
 .start:
@@ -149,6 +153,14 @@ TYPE:
   mov rax, rcx
   mov rsi, rbx
   next
+
+;; Exit the program cleanly.
+TERMINATE:
+  dq .start
+.start:
+  mov rax, $3C
+  mov rdi, 0
+  syscall
 
 PUSH_HELLO_CHARS:
   dq docol
@@ -178,13 +190,6 @@ HELLO:
   dq NEWLINE
   dq EXIT
 
-TERMINATE:
-  dq .start
-.start:
-  mov rax, $3C
-  mov rdi, 0
-  syscall
-
 MAIN:
   dq docol
   dq HELLO
@@ -208,7 +213,6 @@ READ_WORD.max_size = $FF
 READ_WORD.buffer rb READ_WORD.max_size
 READ_WORD.length db ?
 READ_WORD.char_buffer db ?
-
 
 ;; Return stack
 rq $2000
