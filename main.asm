@@ -65,15 +65,38 @@ EMIT:
   popr rsi
   next
 
+TYPE:
+  dq .start
+.start:
+  mov rbx, rsi
+  mov rcx, rax
+
+  mov rax, 1
+  mov rdi, 1
+  pop rdx     ; Length
+  pop rsi     ; Buffer
+  syscall
+
+  mov rax, rcx
+  mov rsi, rbx
+  next
+
 PUSH_HELLO_CHARS:
   dq .start
-  .start:
+.start:
   push $A
   push 'o'
   push 'l'
   push 'l'
   push 'e'
   push 'H'
+  next
+
+PUSH_TEST_STRING:
+  dq .start
+.start:
+  push test_string
+  push test_string.length
   next
 
 HELLO:
@@ -97,11 +120,18 @@ TERMINATE:
 MAIN:
   dq docol
   dq HELLO
+  dq PUSH_TEST_STRING
+  dq PUSH_TEST_STRING
+  dq TYPE
+  dq TYPE
   dq HELLO
   dq HELLO
   dq TERMINATE
 
 segment readable writable
+
+test_string db 'Hi, this is a test.',$A
+.length = $ - test_string
 
 ;; Return stack
 rq $2000
