@@ -65,6 +65,72 @@ EMIT:
   popr rsi
   next
 
+PUSH_NEWLINE_CHAR:
+  dq .start
+.start:
+  push $A
+  next
+
+NEWLINE:
+  dq docol
+  dq PUSH_NEWLINE_CHAR
+  dq EMIT
+  dq EXIT
+
+;; Read a word from standard input and push it onto the stack as a pointer and a
+;; size. The pointer is valid until the next call to READ_WORD.
+READ_WORD:  ; 400170
+  dq .start
+.start:
+  mov [.rsi], rsi
+  mov [.rax], rax
+
+.skip_whitespace:
+  ;; Read characters into .char_buffer until one of them is not whitespace.
+  mov rax, 0
+  mov rdi, 0
+  mov rsi, .char_buffer
+  mov rdx, 1
+  syscall
+
+  cmp [.char_buffer], ' '
+  je .skip_whitespace
+  cmp [.char_buffer], $A
+  je .skip_whitespace
+
+.alpha:
+  ;; We got a character that wasn't whitespace. Now read the actual word.
+  mov [.length], 0
+
+.read_alpha:
+  mov al, [.char_buffer]
+  movzx rbx, [.length]
+  mov rsi, .buffer
+  add rsi, rbx
+  mov [rsi], al
+  inc [.length]
+
+  mov rax, 0
+  mov rdi, 0
+  mov rsi, .char_buffer
+  mov rdx, 1
+  syscall
+
+  cmp [.char_buffer], ' '
+  je .end
+  cmp [.char_buffer], $A
+  jne .read_alpha
+
+.end:
+  push .buffer
+  movzx rax, [.length]
+  push rax
+
+  mov rsi, [.rsi]
+  mov rax, [.rax]
+
+  next
+
 TYPE:
   dq .start
 .start:
@@ -92,11 +158,11 @@ PUSH_HELLO_CHARS:
   push 'H'
   next
 
-PUSH_TEST_STRING:
+PUSH_YOU_TYPED:
   dq .start
 .start:
-  push test_string
-  push test_string.length
+  push you_typed_string
+  push you_typed_string.length
   next
 
 HELLO:
@@ -120,18 +186,26 @@ TERMINATE:
 MAIN:
   dq docol
   dq HELLO
-  dq PUSH_TEST_STRING
-  dq PUSH_TEST_STRING
+  dq READ_WORD
+  dq PUSH_YOU_TYPED
   dq TYPE
   dq TYPE
-  dq HELLO
+  dq NEWLINE
   dq HELLO
   dq TERMINATE
 
 segment readable writable
 
-test_string db 'Hi, this is a test.',$A
-.length = $ - test_string
+you_typed_string db 'You typed: '
+.length = $ - you_typed_string
+
+READ_WORD.rsi dq ?
+READ_WORD.rax dq ?
+READ_WORD.max_size = $FF
+READ_WORD.buffer rb READ_WORD.max_size
+READ_WORD.length db ?
+READ_WORD.char_buffer db ?
+
 
 ;; Return stack
 rq $2000
