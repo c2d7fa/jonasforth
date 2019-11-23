@@ -155,7 +155,7 @@ READ_WORD:  ; 400170
 
 ;; Takes a string (in the form of a pointer and a length on the stack) and
 ;; prints it to standard output.
-TYPE:
+TELL:
   dq .start
 .start:
   mov rbx, rsi
@@ -213,8 +213,8 @@ MAIN:
   dq READ_WORD
   dq LIT, you_typed_string
   dq LIT, you_typed_string.length
-  dq TYPE
-  dq TYPE
+  dq TELL
+  dq TELL
   dq NEWLINE
   dq HELLO
   dq TERMINATE
