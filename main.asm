@@ -59,6 +59,23 @@ LIT:
   push rax
   next
 
+;; 0BRANCH is the fundamental mechanism for branching. If the top of the stack
+;; is zero, we jump by the given offset. 0BRANCH is given the offset as an
+;; integer after the word.
+ZBRANCH:
+  dq .start
+.start:
+  ;; Compare top of stack to see if we should branch
+  pop rax
+  cmp rax, 0
+  jnz .dont_branch
+.do_branch:
+  add rsi, [rsi] ; [RSI], which is the next word, contains the offset; we add this to the instruction pointer.
+  next           ; Then, we can just continue execution as normal
+.dont_branch:
+  add rsi, 8     ; We need to skip over the next word, which contains the offset.
+  next
+
 ;; Expects a character on the stack and prints it to standard output.
 EMIT:
   dq .start
