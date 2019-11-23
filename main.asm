@@ -212,17 +212,74 @@ HELLO:
   dq NEWLINE
   dq EXIT
 
+;; .U prints the value on the stack as an unsigned integer in hexadecimal.
+DOTU:
+  dq .start
+.start:
+  mov [.length], 0
+  pop rax                       ; RAX = value to print
+  push rsi                      ; Save value of RSI
+
+  ;; We start by constructing the buffer to print in reverse
+
+.loop:
+  mov rdx, 0
+  mov rbx, $10
+  div rbx                       ; Put remainer in RDX and quotient in RAX
+
+  ;; Place the appropriate character in the buffer
+  mov rsi, .chars
+  add rsi, rdx
+  mov bl, [rsi]
+  mov rdi, .rbuffer
+  add rdi, [.length]
+  mov [rdi], bl
+  inc [.length]
+
+  ;; .printed_length is the number of characters that we ulitmately want to
+  ;; print. If we have printed a non-zero character, then we should update
+  ;; .printed_length.
+  cmp bl, '0'
+  je .skip_updating_real_length
+  mov rbx, [.length]
+  mov [.printed_length], rbx
+.skip_updating_real_length:
+
+  cmp [.length], 16
+  jle .loop
+
+  ;; Flip buffer around, since it is currently reversed
+  mov rcx, [.printed_length]
+.flip:
+  mov rsi, .rbuffer
+  add rsi, rcx
+  dec rsi
+  mov al, [rsi]
+
+  mov rdi, .buffer
+  add rdi, [.printed_length]
+  sub rdi, rcx
+  mov [rdi], al
+
+  loop .flip
+
+  ;; Print the buffer
+  mov rax, 1
+  mov rdi, 1
+  mov rsi, .buffer
+  mov rdx, [.printed_length]
+  syscall
+
+  ;; Restore RSI and continue execution
+  pop rsi
+  next
+
 MAIN:
   dq docol
   dq HELLO
-  dq READ_WORD
-  dq LIT, you_typed_string
-  dq LIT, you_typed_string.length
-  dq TELL
-  dq TELL
-  dq NEWLINE
-  dq BRANCH, -72
-  dq HELLO
+  dq LIT, 1234567890, DOTU, NEWLINE
+  dq LIT, $ABCD, DOTU, NEWLINE
+  dq LIT, $1234ABCD5678EFAB, DOTU, NEWLINE
   dq TERMINATE
 
 segment readable writable
@@ -236,6 +293,12 @@ READ_WORD.max_size = $FF
 READ_WORD.buffer rb READ_WORD.max_size
 READ_WORD.length db ?
 READ_WORD.char_buffer db ?
+
+DOTU.chars db '0123456789ABCDEF'
+DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in hex
+DOTU.rbuffer rq 16
+DOTU.length dq ?
+DOTU.printed_length dq ?
 
 ;; Return stack
 rq $2000
