@@ -106,7 +106,7 @@ NEWLINE:
 
 ;; Read a word from standard input and push it onto the stack as a pointer and a
 ;; size. The pointer is valid until the next call to READ_WORD.
-READ_WORD:  ; 400170
+READ_WORD:
   dq .start
 .start:
   mov [.rsi], rsi
@@ -157,6 +157,60 @@ READ_WORD:  ; 400170
   mov rax, [.rax]
 
   next
+
+;; Takes a string on the stack and replaces it with the decimal number that the
+;; string represents.
+PARSE_NUMBER:
+  dq .start
+.start:
+  pop [.length]                 ; Length
+  pop rdi                       ; String pointer
+  mov r8, 0                     ; Result
+
+  ;; Add (10^(rcx-1) * parse_char(rdi[length - rcx])) to the accumulated value
+  ;; for each rcx.
+  mov rcx, [.length]
+.loop:
+  ;; First, calcuate 10^(rcx - 1)
+  mov rax, 1
+
+  mov r9, rcx
+  .exp_loop:
+    dec r9
+    jz .break
+    mov rbx, 10
+    mul rbx
+    jmp .exp_loop
+  .break:
+
+  ;; Now, rax = 10^(rcx - 1).
+
+  ;; We need to calulate the value of the character at rdi[length - rcx].
+  mov rbx, rdi
+  add rbx, [.length]
+  sub rbx, rcx
+  movzx rbx, byte [rbx]
+  sub rbx, '0'
+
+  ;; Multiply this value by rax to get (10^(rcx-1) * parse_char(rdi[length - rcx])),
+  ;; then add this to the result.
+  mul rbx
+
+  ;; Add that value to r8
+  add r8, rax
+
+  dec rcx
+  jnz .loop
+
+  push r8
+
+  next
+
+READ_NUMBER:
+  dq docol
+  dq READ_WORD
+  dq PARSE_NUMBER
+  dq EXIT
 
 ;; Takes a string (in the form of a pointer and a length on the stack) and
 ;; prints it to standard output.
@@ -217,6 +271,7 @@ DOTU:
   dq .start
 .start:
   mov [.length], 0
+  mov [.printed_length], 1
   pop rax                       ; RAX = value to print
   push rsi                      ; Save value of RSI
 
@@ -277,9 +332,8 @@ DOTU:
 MAIN:
   dq docol
   dq HELLO
-  dq LIT, 1234567890, DOTU, NEWLINE
-  dq LIT, $ABCD, DOTU, NEWLINE
-  dq LIT, $1234ABCD5678EFAB, DOTU, NEWLINE
+  dq READ_NUMBER, DOTU, NEWLINE
+  dq BRANCH, -8 * 4
   dq TERMINATE
 
 segment readable writable
@@ -299,6 +353,8 @@ DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in he
 DOTU.rbuffer rq 16
 DOTU.length dq ?
 DOTU.printed_length dq ?
+
+PARSE_NUMBER.length dq ?
 
 ;; Return stack
 rq $2000
