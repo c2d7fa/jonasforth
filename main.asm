@@ -44,6 +44,10 @@ docol:
 
 ;; This word is called at the end of a Forth definition. It just needs to
 ;; restore the old value of RSI (saved by 'docol') and resume execution.
+EXIT_entry:
+  dq 0
+  db 4
+  db 'EXIT'
 EXIT:
   dq .start
 .start:
@@ -52,6 +56,10 @@ EXIT:
 
 ;; LIT is a special word that reads the next "word pointer" and causes it to be
 ;; placed on the stack rather than executed.
+LIT_entry:
+  dq EXIT_entry
+  db 3
+  db 'LIT'
 LIT:
   dq .start
 .start:
@@ -59,8 +67,58 @@ LIT:
   push rax
   next
 
+;; Given a string (a pointer following by a size), return the location of the
+;; dictionary entry for that word. If no such word exists, return 0.
+FIND_entry:
+  dq LIT_entry
+  db 4
+  db 'FIND'
+FIND:
+  dq .start
+.start:
+  mov [.rsi], rsi
+  pop [.search_length]
+  pop [.search_buffer]
+
+  ;; RSI contains the entry we are currently looking at
+  mov rsi, [latest_entry]       ; Start with the last added word
+
+.loop:
+  movzx rcx, byte [rsi + 8]     ; Length of word being looked at
+  cmp rcx, [.search_length]
+  jne .next    ; If the words don't have the same length, we have the wrong word
+
+  ;; Otherwise, we need to compare strings
+  lea rdx, [rsi + 8 + 1]        ; Location of character being compared in entry
+  mov rdi, [.search_buffer]     ; Location of character being compared in search buffer
+.compare_char:
+  mov al, [rdx]
+  mov ah, [rdi]
+  cmp al, ah
+  jne .next                     ; They don't match; try again
+  inc rdx                       ; These characters match; look at the next ones
+  inc rdi
+  loop .compare_char
+
+  jmp .found                    ; They match! We are done.
+
+.next:
+  mov rsi, [rsi]                ; Look at the previous entry
+  cmp rsi, 0
+  jnz .loop                    ; If there is no previous word, exit and return 0
+
+.found:
+  push rsi
+
+  mov rsi, [.rsi]
+  next
+
 ;; BRANCH is the fundamental mechanism for branching. BRANCH reads the next word
 ;; as a signed integer literal and jumps by that offset.
+BRANCH_entry:
+  dq FIND_entry
+  db 6
+  db 'BRANCH'
 BRANCH:
   dq .start
 .start:
@@ -101,6 +159,17 @@ EMIT:
 NEWLINE:
   dq docol
   dq LIT, $A
+  dq EMIT
+  dq EXIT
+
+;; Prints a space to standard output.
+SPACE_entry:
+  dq BRANCH_entry
+  db 5
+  db 'SPACE'
+SPACE:
+  dq docol
+  dq LIT, ' '
   dq EMIT
   dq EXIT
 
@@ -255,6 +324,10 @@ PUSH_YOU_TYPED:
   push you_typed_string.length
   next
 
+HELLO_entry:
+  dq SPACE_entry
+  db 5
+  db 'HELLO'
 HELLO:
   dq docol
   dq LIT, 'H', EMIT
@@ -267,6 +340,10 @@ HELLO:
   dq EXIT
 
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
+DOTU_entry:
+  dq HELLO_entry
+  db 2
+  db '.U'
 DOTU:
   dq .start
 .start:
@@ -332,14 +409,39 @@ DOTU:
 MAIN:
   dq docol
   dq HELLO
-  dq READ_NUMBER, DOTU, NEWLINE
-  dq BRANCH, -8 * 4
+  dq LIT, SPACE_entry, DOTU, NEWLINE
+  dq LIT, HELLO_entry, DOTU, NEWLINE
+  dq LIT, DOTU_entry, DOTU, NEWLINE
+  dq LIT, SPACE_string, LIT, SPACE_string.length, TELL, SPACE
+  dq LIT, SPACE_string, LIT, SPACE_string.length, FIND, DOTU, NEWLINE
+  dq LIT, HELLO_string, LIT, HELLO_string.length, TELL, SPACE
+  dq LIT, HELLO_string, LIT, HELLO_string.length, FIND, DOTU, NEWLINE
+  dq LIT, DOTU_string, LIT, DOTU_string.length, TELL, SPACE
+  dq LIT, DOTU_string, LIT, DOTU_string.length, FIND, DOTU, NEWLINE
+  dq LIT, HELLA_string, LIT, HELLA_string.length, TELL, SPACE
+  dq LIT, HELLA_string, LIT, HELLA_string.length, FIND, DOTU, NEWLINE
   dq TERMINATE
 
 segment readable writable
 
+latest_entry dq DOTU_entry
+
+SPACE_string db 'SPACE'
+.length = $ - SPACE_string
+HELLO_string db 'HELLO'
+.length = $ - HELLO_string
+DOTU_string db '.U'
+.length = $ - DOTU_string
+HELLA_string db 'HELLA'
+.length = $ - HELLA_string
+
+
 you_typed_string db 'You typed: '
 .length = $ - you_typed_string
+
+FIND.search_length dq ?
+FIND.search_buffer dq ?
+FIND.rsi dq ?
 
 READ_WORD.rsi dq ?
 READ_WORD.rax dq ?
