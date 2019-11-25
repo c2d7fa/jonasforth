@@ -23,6 +23,42 @@ macro popr x {
   add rbp, 8
 }
 
+;; The following macro generates the dictionary header. It updates the
+;; initial_latest_entry variable, which is used as the initial value of the
+;; latest_entry variable that is made available at runtime.
+;;
+;; The header contains a link to the previous entry, the length of the name of
+;; the word and the word itself as a string literal.
+;;
+;; This macro also defines a label LABEL_entry.
+initial_latest_entry = 0
+macro header label, name {
+  local .string_end
+
+label#_entry:
+  dq initial_latest_entry
+  db .string_end - ($ + 1)
+  db name
+  .string_end:
+label:
+
+initial_latest_entry = label#_entry
+}
+
+;; Define a Forth word that is implemented in assembly. See 'header' for details.
+macro forth_asm label, name {
+  header label, name
+  dq .start
+.start:
+}
+
+;; Define a Forth word that is implemented in Forth. (The body will be a list of
+;; 'dq' statements.)
+macro forth label, name {
+  header label, name
+  dq docol
+}
+
 segment readable executable
 
 main:
@@ -44,38 +80,20 @@ docol:
 
 ;; This word is called at the end of a Forth definition. It just needs to
 ;; restore the old value of RSI (saved by 'docol') and resume execution.
-EXIT_entry:
-  dq 0
-  db 4
-  db 'EXIT'
-EXIT:
-  dq .start
-.start:
+forth_asm EXIT, 'EXIT'
   popr rsi
   next
 
 ;; LIT is a special word that reads the next "word pointer" and causes it to be
 ;; placed on the stack rather than executed.
-LIT_entry:
-  dq EXIT_entry
-  db 3
-  db 'LIT'
-LIT:
-  dq .start
-.start:
+forth_asm LIT, 'LIT'
   lodsq
   push rax
   next
 
 ;; Given a string (a pointer following by a size), return the location of the
 ;; dictionary entry for that word. If no such word exists, return 0.
-FIND_entry:
-  dq LIT_entry
-  db 4
-  db 'FIND'
-FIND:
-  dq .start
-.start:
+forth_asm FIND, 'FIND'
   mov [.rsi], rsi
   pop [.search_length]
   pop [.search_buffer]
@@ -115,20 +133,12 @@ FIND:
 
 ;; BRANCH is the fundamental mechanism for branching. BRANCH reads the next word
 ;; as a signed integer literal and jumps by that offset.
-BRANCH_entry:
-  dq FIND_entry
-  db 6
-  db 'BRANCH'
-BRANCH:
-  dq .start
-.start:
+forth_asm BRANCH, 'BRANCH'
   add rsi, [rsi] ; [RSI], which is the next word, contains the offset; we add this to the instruction pointer.
   next           ; Then, we can just continue execution as normal
 
 ;; 0BRANCH is like BRANCH, but it jumps only if the top of the stack is zero.
-ZBRANCH:
-  dq .start
-.start:
+forth_asm ZBRANCH, '0BRANCH'
   ;; Compare top of stack to see if we should branch
   pop rax
   cmp rax, 0
@@ -140,9 +150,7 @@ ZBRANCH:
   next
 
 ;; Expects a character on the stack and prints it to standard output.
-EMIT:
-  dq .start
-.start:
+forth_asm EMIT, 'EMIT'
   pushr rsi
   pushr rax
   mov rax, 1
@@ -156,28 +164,20 @@ EMIT:
   next
 
 ;; Prints a newline to standard output.
-NEWLINE:
-  dq docol
+forth NEWLINE, 'NEWLINE'
   dq LIT, $A
   dq EMIT
   dq EXIT
 
 ;; Prints a space to standard output.
-SPACE_entry:
-  dq BRANCH_entry
-  db 5
-  db 'SPACE'
-SPACE:
-  dq docol
+forth SPACE, 'SPACE'
   dq LIT, ' '
   dq EMIT
   dq EXIT
 
 ;; Read a word from standard input and push it onto the stack as a pointer and a
 ;; size. The pointer is valid until the next call to READ_WORD.
-READ_WORD:
-  dq .start
-.start:
+forth_asm READ_WORD, 'READ-WORD'
   mov [.rsi], rsi
   mov [.rax], rax
 
@@ -229,9 +229,7 @@ READ_WORD:
 
 ;; Takes a string on the stack and replaces it with the decimal number that the
 ;; string represents.
-PARSE_NUMBER:
-  dq .start
-.start:
+forth_asm PARSE_NUMBER, 'PARSE-NUMBER'
   pop [.length]                 ; Length
   pop rdi                       ; String pointer
   mov r8, 0                     ; Result
@@ -275,17 +273,14 @@ PARSE_NUMBER:
 
   next
 
-READ_NUMBER:
-  dq docol
+forth READ_NUMBER, 'READ-NUMBER'
   dq READ_WORD
   dq PARSE_NUMBER
   dq EXIT
 
 ;; Takes a string (in the form of a pointer and a length on the stack) and
 ;; prints it to standard output.
-TELL:
-  dq .start
-.start:
+forth_asm TELL, 'TELL'
   mov rbx, rsi
   mov rcx, rax
 
@@ -300,36 +295,12 @@ TELL:
   next
 
 ;; Exit the program cleanly.
-TERMINATE:
-  dq .start
-.start:
+forth_asm TERMINATE, 'TERMINATE'
   mov rax, $3C
   mov rdi, 0
   syscall
 
-PUSH_HELLO_CHARS:
-  dq docol
-  dq LIT, $A
-  dq LIT, 'o'
-  dq LIT, 'l'
-  dq LIT, 'l'
-  dq LIT, 'e'
-  dq LIT, 'H'
-  dq EXIT
-
-PUSH_YOU_TYPED:
-  dq .start
-.start:
-  push you_typed_string
-  push you_typed_string.length
-  next
-
-HELLO_entry:
-  dq SPACE_entry
-  db 5
-  db 'HELLO'
-HELLO:
-  dq docol
+forth HELLO, 'HELLO'
   dq LIT, 'H', EMIT
   dq LIT, 'e', EMIT
   dq LIT, 'l', EMIT
@@ -340,13 +311,7 @@ HELLO:
   dq EXIT
 
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
-DOTU_entry:
-  dq HELLO_entry
-  db 2
-  db '.U'
-DOTU:
-  dq .start
-.start:
+forth_asm DOTU, '.U'
   mov [.length], 0
   mov [.printed_length], 1
   pop rax                       ; RAX = value to print
@@ -406,25 +371,15 @@ DOTU:
   pop rsi
   next
 
-MAIN:
-  dq docol
+forth MAIN, 'MAIN'
   dq HELLO
-  dq LIT, SPACE_entry, DOTU, NEWLINE
-  dq LIT, HELLO_entry, DOTU, NEWLINE
-  dq LIT, DOTU_entry, DOTU, NEWLINE
-  dq LIT, SPACE_string, LIT, SPACE_string.length, TELL, SPACE
-  dq LIT, SPACE_string, LIT, SPACE_string.length, FIND, DOTU, NEWLINE
-  dq LIT, HELLO_string, LIT, HELLO_string.length, TELL, SPACE
-  dq LIT, HELLO_string, LIT, HELLO_string.length, FIND, DOTU, NEWLINE
-  dq LIT, DOTU_string, LIT, DOTU_string.length, TELL, SPACE
-  dq LIT, DOTU_string, LIT, DOTU_string.length, FIND, DOTU, NEWLINE
-  dq LIT, HELLA_string, LIT, HELLA_string.length, TELL, SPACE
-  dq LIT, HELLA_string, LIT, HELLA_string.length, FIND, DOTU, NEWLINE
+  dq READ_WORD, FIND, DOTU, NEWLINE
+  dq BRANCH, -8 * 5
   dq TERMINATE
 
 segment readable writable
 
-latest_entry dq DOTU_entry
+latest_entry dq initial_latest_entry
 
 SPACE_string db 'SPACE'
 .length = $ - SPACE_string
