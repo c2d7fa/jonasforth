@@ -1,4 +1,4 @@
-main: main.asm
+main: main.asm impl.asm
 	fasm $< $@
 
 .PHONY: clean

@@ -59,7 +59,13 @@ macro forth label, name {
   dq docol
 }
 
+
+
 segment readable executable
+
+entry main
+
+include "impl.asm"
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
@@ -95,37 +101,15 @@ forth_asm LIT, 'LIT'
 ;; dictionary entry for that word. If no such word exists, return 0.
 forth_asm FIND, 'FIND'
   mov [.rsi], rsi
-  pop [.search_length]
-  pop [.search_buffer]
 
-  ;; RSI contains the entry we are currently looking at
+  pop [find.search_length]
+  pop [find.search_buffer]
   mov rsi, [latest_entry]       ; Start with the last added word
+  call find
+  push rsi
 
-.loop:
-  movzx rcx, byte [rsi + 8]     ; Length of word being looked at
-  cmp rcx, [.search_length]
-  jne .next    ; If the words don't have the same length, we have the wrong word
-
-  ;; Otherwise, we need to compare strings
-  lea rdx, [rsi + 8 + 1]        ; Location of character being compared in entry
-  mov rdi, [.search_buffer]     ; Location of character being compared in search buffer
-.compare_char:
-  mov al, [rdx]
-  mov ah, [rdi]
-  cmp al, ah
-  jne .next                     ; They don't match; try again
-  inc rdx                       ; These characters match; look at the next ones
-  inc rdi
-  loop .compare_char
-
-  jmp .found                    ; They match! We are done.
-
-.next:
-  mov rsi, [rsi]                ; Look at the previous entry
-  cmp rsi, 0
-  jnz .loop                    ; If there is no previous word, exit and return 0
-
-.found:
+  mov rsi, [.rsi]
+  next
   push rsi
 
   mov rsi, [.rsi]
@@ -200,98 +184,25 @@ forth SPACE, 'SPACE'
 ;; size. The pointer is valid until the next call to READ_WORD.
 forth_asm READ_WORD, 'READ-WORD'
   mov [.rsi], rsi
-  mov [.rax], rax
 
-.skip_whitespace:
-  ;; Read characters into .char_buffer until one of them is not whitespace.
-  mov rax, 0
-  mov rdi, 0
-  mov rsi, .char_buffer
-  mov rdx, 1
-  syscall
-
-  cmp [.char_buffer], ' '
-  je .skip_whitespace
-  cmp [.char_buffer], $A
-  je .skip_whitespace
-
-.alpha:
-  ;; We got a character that wasn't whitespace. Now read the actual word.
-  mov [.length], 0
-
-.read_alpha:
-  mov al, [.char_buffer]
-  movzx rbx, [.length]
-  mov rsi, .buffer
-  add rsi, rbx
-  mov [rsi], al
-  inc [.length]
-
-  mov rax, 0
-  mov rdi, 0
-  mov rsi, .char_buffer
-  mov rdx, 1
-  syscall
-
-  cmp [.char_buffer], ' '
-  je .end
-  cmp [.char_buffer], $A
-  jne .read_alpha
-
-.end:
-  push .buffer
-  movzx rax, [.length]
-  push rax
+  call read_word
+  push rdi                      ; Buffer
+  push rdx                      ; Length
 
   mov rsi, [.rsi]
-  mov rax, [.rax]
-
   next
 
 ;; Takes a string on the stack and replaces it with the decimal number that the
 ;; string represents.
 forth_asm PARSE_NUMBER, 'PARSE-NUMBER'
-  pop [.length]                 ; Length
-  pop rdi                       ; String pointer
-  mov r8, 0                     ; Result
+  pop [parse_number.length]     ; Length
+  pop [parse_number.buffer]     ; String pointer
 
-  ;; Add (10^(rcx-1) * parse_char(rdi[length - rcx])) to the accumulated value
-  ;; for each rcx.
-  mov rcx, [.length]
-.loop:
-  ;; First, calcuate 10^(rcx - 1)
-  mov rax, 1
+  push rsi
+  call parse_number
+  pop rsi
 
-  mov r9, rcx
-  .exp_loop:
-    dec r9
-    jz .break
-    mov rbx, 10
-    mul rbx
-    jmp .exp_loop
-  .break:
-
-  ;; Now, rax = 10^(rcx - 1).
-
-  ;; We need to calulate the value of the character at rdi[length - rcx].
-  mov rbx, rdi
-  add rbx, [.length]
-  sub rbx, rcx
-  movzx rbx, byte [rbx]
-  sub rbx, '0'
-
-  ;; Multiply this value by rax to get (10^(rcx-1) * parse_char(rdi[length - rcx])),
-  ;; then add this to the result.
-  mul rbx
-
-  ;; Add that value to r8
-  add r8, rax
-
-  dec rcx
-  jnz .loop
-
-  push r8
-
+  push rax                      ; Result
   next
 
 forth READ_NUMBER, 'READ-NUMBER'
@@ -402,24 +313,16 @@ segment readable writable
 
 latest_entry dq initial_latest_entry
 
-FIND.search_length dq ?
-FIND.search_buffer dq ?
 FIND.rsi dq ?
 
 READ_WORD.rsi dq ?
-READ_WORD.rax dq ?
-READ_WORD.max_size = $FF
-READ_WORD.buffer rb READ_WORD.max_size
-READ_WORD.length db ?
-READ_WORD.char_buffer db ?
+READ_WORD.rbp dq ?
 
 DOTU.chars db '0123456789ABCDEF'
 DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in hex
 DOTU.rbuffer rq 16
 DOTU.length dq ?
 DOTU.printed_length dq ?
-
-PARSE_NUMBER.length dq ?
 
 ;; Return stack
 rq $2000
