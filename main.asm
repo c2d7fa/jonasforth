@@ -402,19 +402,6 @@ segment readable writable
 
 latest_entry dq initial_latest_entry
 
-SPACE_string db 'SPACE'
-.length = $ - SPACE_string
-HELLO_string db 'HELLO'
-.length = $ - HELLO_string
-DOTU_string db '.U'
-.length = $ - DOTU_string
-HELLA_string db 'HELLA'
-.length = $ - HELLA_string
-
-
-you_typed_string db 'You typed: '
-.length = $ - you_typed_string
-
 FIND.search_length dq ?
 FIND.search_buffer dq ?
 FIND.rsi dq ?
