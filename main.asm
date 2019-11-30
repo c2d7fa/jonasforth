@@ -65,8 +65,8 @@ main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
   mov rbp, return_stack_top  ; Initialize return stack
 
-  mov rsi, program
-  next
+  mov rax, MAIN
+  jmp qword [rax]
 
 program: dq MAIN
 
@@ -131,6 +131,17 @@ forth_asm FIND, 'FIND'
   mov rsi, [.rsi]
   next
 
+;; Given an entry in the dictionary, return a pointer to the codeword of that
+;; entry.
+forth_asm TCFA, '>CFA'
+  pop rax
+  add rax, 8                    ; [rax] = length of name
+  movzx rbx, byte [rax]
+  inc rax
+  add rax, rbx                  ; [rax] = codeword
+  push rax
+  next
+
 ;; BRANCH is the fundamental mechanism for branching. BRANCH reads the next word
 ;; as a signed integer literal and jumps by that offset.
 forth_asm BRANCH, 'BRANCH'
@@ -148,6 +159,16 @@ forth_asm ZBRANCH, '0BRANCH'
 .dont_branch:
   add rsi, 8     ; We need to skip over the next word, which contains the offset.
   next
+
+;; Duplicate the top of the stack.
+forth_asm DUP_, 'DUP'
+  push qword [rsp]
+  next
+
+;; Execute the codeword at the given address.
+forth_asm EXEC, 'EXEC'
+  pop rax
+  jmp qword [rax]
 
 ;; Expects a character on the stack and prints it to standard output.
 forth_asm EMIT, 'EMIT'
@@ -373,7 +394,7 @@ forth_asm DOTU, '.U'
 
 forth MAIN, 'MAIN'
   dq HELLO
-  dq READ_WORD, FIND, DOTU, NEWLINE
+  dq READ_WORD, FIND, TCFA, EXEC
   dq BRANCH, -8 * 5
   dq TERMINATE
 
