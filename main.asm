@@ -312,6 +312,26 @@ forth_asm DOTU, '.U'
   pop rsi
   next
 
+;; Takes a value and an address, and stores the value at the given address.
+forth_asm PUT, '!'
+  pop rbx                       ; Address
+  pop rax                       ; Value
+  mov [rbx], rax
+  next
+
+;; Takes an address and returns the value at the given address.
+forth_asm GET, '@'
+  pop rax
+  mov rax, [rax]
+  push rax
+  next
+
+;; Get the location of the STATE variable. It can be set with '!' and read with
+;; '@'.
+forth STATE, 'STATE'
+  dq LIT, var_STATE
+  dq EXIT
+
 forth MAIN, 'MAIN'
   dq HELLO
   dq INTERPRET
@@ -321,6 +341,10 @@ forth MAIN, 'MAIN'
 segment readable writable
 
 latest_entry dq initial_latest_entry
+
+;; The STATE variable is 0 when the interpreter is executing, and non-zero when
+;; it is compiling.
+var_STATE dq 0
 
 FIND.rsi dq ?
 
