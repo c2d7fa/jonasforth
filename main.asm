@@ -242,13 +242,53 @@ forth HELLO, 'HELLO'
   dq NEWLINE
   dq EXIT
 
+;; Duplicate a pair of elements.
+forth_asm PAIRDUP, '2DUP'
+  pop rbx
+  pop rax
+  push rax
+  push rbx
+  push rax
+  push rbx
+  next
+
+;; Swap the top two elements on the stack.
+forth_asm SWAP, 'SWAP'
+  pop rax
+  pop rbx
+  push rax
+  push rbx
+  next
+
+;; Remove the top element from the stack.
+forth_asm DROP, 'DROP'
+  add rsp, 8
+  next
+
 ;; The INTERPRET word reads and interprets user input. It's behavior depends on
 ;; the current STATE. It provides special handling for integers. (TODO)
 forth INTERPRET, 'INTERPRET'
+  ;; Read word
   dq READ_WORD
-  dq FIND
+  dq PAIRDUP
+  ;; Stack is (word length word length).
+  dq FIND                       ; Try to find word
+  dq DUP_
+  dq ZBRANCH, 8 * 8             ; Check if word is found
+
+  ;; Word is found, execute it
   dq TCFA
+  ;; Stack is (word length addr)
+  dq SWAP, DROP
+  dq SWAP, DROP
+  ;; Stack is (addr)
   dq EXEC
+  dq EXIT
+
+  ;; No word is found, assume it is an integer literal
+  ;; Stack is (word length addr)
+  dq DROP
+  dq PARSE_NUMBER
   dq EXIT
 
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
