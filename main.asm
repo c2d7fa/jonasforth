@@ -242,6 +242,15 @@ forth HELLO, 'HELLO'
   dq NEWLINE
   dq EXIT
 
+;; The INTERPRET word reads and interprets user input. It's behavior depends on
+;; the current STATE. It provides special handling for integers. (TODO)
+forth INTERPRET, 'INTERPRET'
+  dq READ_WORD
+  dq FIND
+  dq TCFA
+  dq EXEC
+  dq EXIT
+
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
 forth_asm DOTU, '.U'
   mov [.length], 0
@@ -305,8 +314,8 @@ forth_asm DOTU, '.U'
 
 forth MAIN, 'MAIN'
   dq HELLO
-  dq READ_WORD, FIND, TCFA, EXEC
-  dq BRANCH, -8 * 5
+  dq INTERPRET
+  dq BRANCH, -8 * 2
   dq TERMINATE
 
 segment readable writable
