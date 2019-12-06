@@ -56,10 +56,8 @@ macro forth_asm label, name {
 ;; 'dq' statements.)
 macro forth label, name {
   header label, name
-  dq docol
+  dq DOCOL
 }
-
-
 
 segment readable executable
 
@@ -79,13 +77,13 @@ program: dq MAIN
 ;; The codeword is the code that will be executed at the beginning of a forth
 ;; word. It needs to save the old RSI and update it to point to the next word to
 ;; execute.
-docol:
+header DOCOL, 'DOCOL'
   pushr rsi            ; Save old value of RSI on return stack; we will continue execution there after we are done executing this word
   lea rsi, [rax + 8]   ; RAX currently points to the address of the codeword, so we want to continue at RAX+8
   next                 ; Execute word pointed to by RSI
 
 ;; This word is called at the end of a Forth definition. It just needs to
-;; restore the old value of RSI (saved by 'docol') and resume execution.
+;; restore the old value of RSI (saved by 'DOCOL') and resume execution.
 forth_asm EXIT, 'EXIT'
   popr rsi
   next
@@ -408,6 +406,69 @@ forth COMMA, ','
   dq HERE, PUT                  ; Update HERE to point to the new address
   dq EXIT
 
+;; Read user input until next " character is found. Push a string containing the
+;; input on the stack as (buffer length). Note that the buffer is only valid
+;; until the next call to S" and that no more than 255 character can be read.
+forth_asm READ_STRING, 'S"'
+  push rsi
+
+  mov [.length], 0
+
+.read_char:
+  mov rax, 0
+  mov rdi, 0
+  mov rsi, .char_buffer
+  mov rdx, 1
+  syscall
+
+  mov al, [.char_buffer]
+  cmp al, '"'
+  je .done
+
+  mov rdx, .buffer
+  add rdx, [.length]
+  mov [rdx], al
+  inc [.length]
+  jmp .read_char
+
+.done:
+  pop rsi
+
+  push .buffer
+  push [.length]
+
+  next
+
+;; CREATE inserts a new header in the dictionary, and updates LATEST so that it
+;; points to the header. To compile a word, the user can then call ',' to
+;; continue to append data after the header.
+;;
+;; It takes the name of the word as a string (address length) on the stack.
+forth_asm CREATE, 'CREATE'
+  pop rcx                       ; Word string length
+  pop rdx                       ; Word string pointer
+
+  mov rdi, [here]               ; rdi = Address at which to insert this entry
+  mov rax, [latest_entry]       ; rax = Address of the previous entry
+  mov [rdi], rax                ; Insert link to previous entry
+  mov [latest_entry], rdi       ; Update LATEST to point to this word
+
+  add rdi, 8
+  mov [rdi], rcx                ; Insert length
+
+  ;; Insert word string
+  add rdi, 1
+
+  push rsi
+  mov rsi, rdx                  ; rsi = Word string pointer
+  rep movsb
+  pop rsi
+
+  ;; Update HERE
+  mov [here], rdi
+
+  next
+
 forth MAIN, 'MAIN'
   dq HELLO
   dq INTERPRET
@@ -429,6 +490,10 @@ FIND.rsi dq ?
 
 READ_WORD.rsi dq ?
 READ_WORD.rbp dq ?
+
+READ_STRING.char_buffer db ?
+READ_STRING.buffer rb $FF
+READ_STRING.length dq ?
 
 DOTU.chars db '0123456789ABCDEF'
 DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in hex
