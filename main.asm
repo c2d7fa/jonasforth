@@ -366,6 +366,23 @@ forth_asm GET, '@'
   push rax
   next
 
+;; Add two integers on the stack.
+forth_asm PLUS, '+'
+  pop rax
+  pop rbx
+  add rax, rbx
+  push rax
+  next
+
+;; Calculate difference between two integers on the stack. The second number is
+;; subtracted from the first.
+forth_asm MINUS, '-'
+  pop rax
+  pop rbx
+  sub rbx, rax
+  push rbx
+  next
+
 ;; Get the location of the STATE variable. It can be set with '!' and read with
 ;; '@'.
 forth STATE, 'STATE'
@@ -383,6 +400,12 @@ forth LATEST, 'LATEST'
 ;; read it manually with 'HERE'.
 forth HERE, 'HERE'
   dq LIT, here
+  dq EXIT
+
+forth COMMA, ','
+  dq HERE, GET, PUT             ; Set the memory at the address pointed to by HERE
+  dq HERE, GET, LIT, 8, PLUS    ; Calculate new address for HERE to point to
+  dq HERE, PUT                  ; Update HERE to point to the new address
   dq EXIT
 
 forth MAIN, 'MAIN'
