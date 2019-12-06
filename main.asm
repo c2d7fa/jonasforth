@@ -372,6 +372,19 @@ forth STATE, 'STATE'
   dq LIT, var_STATE
   dq EXIT
 
+;; Get the location of the LATEST variable. It can be set with '!' and read with
+;; '@'.
+forth LATEST, 'LATEST'
+  dq LIT, latest_entry
+  dq EXIT
+
+;; Get the location at which compiled words are expected to be added. This
+;; pointer is usually modified automatically when calling ',', but we can also
+;; read it manually with 'HERE'.
+forth HERE, 'HERE'
+  dq LIT, here
+  dq EXIT
+
 forth MAIN, 'MAIN'
   dq HELLO
   dq INTERPRET
@@ -380,6 +393,9 @@ forth MAIN, 'MAIN'
 
 segment readable writable
 
+;; The LATEST variable holds a pointer to the word that was last added to the
+;; dictionary. This pointer is updated as new words are added, and its value is
+;; used by FIND to look up words.
 latest_entry dq initial_latest_entry
 
 ;; The STATE variable is 0 when the interpreter is executing, and non-zero when
@@ -396,6 +412,10 @@ DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in he
 DOTU.rbuffer rq 16
 DOTU.length dq ?
 DOTU.printed_length dq ?
+
+;; Reserve space for compiled words, accessed through HERE.
+here dq here_top
+here_top rq $2000
 
 ;; Return stack
 rq $2000
