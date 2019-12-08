@@ -527,7 +527,7 @@ forth IMMEDIATE, 'IMMEDIATE', 1
   dq LIT, 1
   dq LATEST, GET
   dq LIT, 8, PLUS
-  dq PUT
+  dq PUT_BYTE
   dq EXIT
 
 ;; Given the address of a word, return 0 if the given word is not immediate.

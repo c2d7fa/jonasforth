@@ -1,3 +1,7 @@
+.PHONY: run
+run: main
+	cat sys.f - | ./main
+
 main: main.asm impl.asm
 	fasm $< $@
 

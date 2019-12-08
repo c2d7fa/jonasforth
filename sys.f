@@ -1,0 +1,11 @@
+S" :" CREATE ] DOCOL
+  READ-WORD CREATE
+  LIT DOCOL ,
+  ]
+EXIT [
+
+: ;
+  LIT EXIT ,
+  [ S" [" FIND >CFA , ]
+  EXIT
+[ IMMEDIATE
