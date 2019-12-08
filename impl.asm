@@ -15,12 +15,12 @@ segment readable executable
 find:
   ;; RSI contains the entry we are currently looking at
 .loop:
-  movzx rcx, byte [rsi + 8]     ; Length of word being looked at
+  movzx rcx, byte [rsi + 16]    ; Length of word being looked at
   cmp rcx, [.search_length]
   jne .next    ; If the words don't have the same length, we have the wrong word
 
   ;; Otherwise, we need to compare strings
-  lea rdx, [rsi + 8 + 1]        ; Location of character being compared in entry
+  lea rdx, [rsi + 16 + 1]       ; Location of character being compared in entry
   mov rdi, [.search_buffer]     ; Location of character being compared in search buffer
 .compare_char:
   mov al, [rdx]

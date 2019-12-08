@@ -32,11 +32,12 @@ macro popr x {
 ;;
 ;; This macro also defines a label LABEL_entry.
 initial_latest_entry = 0
-macro header label, name {
+macro header label, name, immediate {
   local .string_end
 
 label#_entry:
   dq initial_latest_entry
+  dq 0
   db .string_end - ($ + 1)
   db name
   .string_end:
@@ -46,16 +47,16 @@ initial_latest_entry = label#_entry
 }
 
 ;; Define a Forth word that is implemented in assembly. See 'header' for details.
-macro forth_asm label, name {
-  header label, name
+macro forth_asm label, name, immediate {
+  header label, name, immediate
   dq .start
 .start:
 }
 
 ;; Define a Forth word that is implemented in Forth. (The body will be a list of
 ;; 'dq' statements.)
-macro forth label, name {
-  header label, name
+macro forth label, name, immediate {
+  header label, name, immediate
   dq DOCOL
 }
 
@@ -117,7 +118,7 @@ forth_asm FIND, 'FIND'
 ;; entry.
 forth_asm TCFA, '>CFA'
   pop rax
-  add rax, 8                    ; [rax] = length of name
+  add rax, 16                   ; [rax] = length of name
   movzx rbx, byte [rax]
   inc rax
   add rax, rbx                  ; [rax] = codeword
@@ -454,6 +455,10 @@ forth_asm CREATE, 'CREATE'
   mov [latest_entry], rdi       ; Update LATEST to point to this word
 
   add rdi, 8
+  mov rax, 0
+  mov [rdi], rax                ; Set immediate flag
+
+  add rdi, 8
   mov [rdi], rcx                ; Insert length
 
   ;; Insert word string
@@ -468,6 +473,21 @@ forth_asm CREATE, 'CREATE'
   mov [here], rdi
 
   next
+
+;; Mark the last added word as immediate.
+forth IMMEDIATE, 'IMMEDIATE', 1
+  dq LIT, 1
+  dq LATEST, GET
+  dq LIT, 8, PLUS
+  dq PUT
+  dq EXIT
+
+;; Return 0 if the given word is not immediate.
+forth IS_IMMEDIATE, 'IMMEDIATE?'
+  dq FIND
+  dq LIT, 8, PLUS
+  dq GET
+  dq EXIT
 
 forth MAIN, 'MAIN'
   dq HELLO
