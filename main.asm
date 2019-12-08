@@ -37,7 +37,11 @@ macro header label, name, immediate {
 
 label#_entry:
   dq initial_latest_entry
-  dq 0
+  if immediate eq
+    db 0
+  else
+    db 1
+  end if
   db .string_end - ($ + 1)
   db name
   .string_end:
@@ -118,7 +122,7 @@ forth_asm FIND, 'FIND'
 ;; entry.
 forth_asm TCFA, '>CFA'
   pop rax
-  add rax, 16                   ; [rax] = length of name
+  add rax, 8 + 1                ; [rax] = length of name
   movzx rbx, byte [rax]
   inc rax
   add rax, rbx                  ; [rax] = codeword
@@ -264,8 +268,19 @@ forth_asm DROP, 'DROP'
   add rsp, 8
   next
 
+forth_asm NOT_, 'NOT'
+  pop rax
+  cmp rax, 0
+  jz .false
+.true:
+  push 0
+  next
+.false:
+  push 1
+  next
+
 ;; The INTERPRET word reads and interprets user input. It's behavior depends on
-;; the current STATE. It provides special handling for integers. (TODO)
+;; the current STATE. It provides special handling for integers.
 forth INTERPRET, 'INTERPRET'
   ;; Read word
   dq READ_WORD
@@ -273,9 +288,22 @@ forth INTERPRET, 'INTERPRET'
   ;; Stack is (word length word length).
   dq FIND                       ; Try to find word
   dq DUP_
-  dq ZBRANCH, 8 * 8             ; Check if word is found
+  dq ZBRANCH, 8 * 20            ; Check if word is found
 
-  ;; Word is found, execute it
+  ;; - Word is found -
+
+  dq STATE, GET, ZBRANCH, 8 * 9 ; Check whether we are in compilation or immediate mode
+
+  ;; (Word found, compilation mode)
+  dq DUP_, IS_IMMEDIATE, NOT_, ZBRANCH, 8 * 4 ; If the word is immediate, continue as we would in immediate mode
+
+  ;; Otherwise, we want to compile this word
+  dq TCFA
+  dq COMMA
+  dq EXIT
+
+  ;; (Word found, immediate mode)
+  ;; Execute word
   dq TCFA
   ;; Stack is (word length addr)
   dq SWAP, DROP
@@ -284,10 +312,19 @@ forth INTERPRET, 'INTERPRET'
   dq EXEC
   dq EXIT
 
-  ;; No word is found, assume it is an integer literal
+  ;; - No word is found, assume it is an integer literal -
   ;; Stack is (word length addr)
   dq DROP
   dq PARSE_NUMBER
+
+  dq STATE, GET, ZBRANCH, 8 * 5 ; Check whether we are in compilation or immediate mode
+
+  ;; (Number, compilation mode)
+  dq LIT, LIT, COMMA
+  dq COMMA
+  dq EXIT
+
+  ;; (Number, immediate mode)
   dq EXIT
 
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
@@ -362,6 +399,18 @@ forth_asm PUT, '!'
 forth_asm GET, '@'
   pop rax
   mov rax, [rax]
+  push rax
+  next
+
+forth_asm PUT_BYTE, 'C!'
+  pop rbx
+  pop rax                       ; Value
+  mov [rbx], al
+  next
+
+forth_asm GET_BYTE, 'C@'
+  pop rax
+  movzx rax, byte [rax]
   push rax
   next
 
@@ -455,11 +504,10 @@ forth_asm CREATE, 'CREATE'
   mov [latest_entry], rdi       ; Update LATEST to point to this word
 
   add rdi, 8
-  mov rax, 0
-  mov [rdi], rax                ; Set immediate flag
+  mov [rdi], byte 0             ; Insert immediate flag
 
-  add rdi, 8
-  mov [rdi], rcx                ; Insert length
+  add rdi, 1
+  mov [rdi], byte cl            ; Insert length
 
   ;; Insert word string
   add rdi, 1
@@ -482,11 +530,20 @@ forth IMMEDIATE, 'IMMEDIATE', 1
   dq PUT
   dq EXIT
 
-;; Return 0 if the given word is not immediate.
+;; Given the address of a word, return 0 if the given word is not immediate.
 forth IS_IMMEDIATE, 'IMMEDIATE?'
-  dq FIND
   dq LIT, 8, PLUS
-  dq GET
+  dq GET_BYTE
+  dq EXIT
+
+;; Enter immediate mode, immediately
+forth INTO_IMMEDIATE, '[', 1
+  dq LIT, 0, STATE, PUT_BYTE
+  dq EXIT
+
+;; Enter compilation mode
+forth OUTOF_IMMEDIATE, ']'
+  dq LIT, 1, STATE, PUT_BYTE
   dq EXIT
 
 forth MAIN, 'MAIN'
