@@ -431,6 +431,17 @@ forth_asm MINUS, '-'
   push rbx
   next
 
+;; Given two integers a and b on the stack, pushes the quotient and remainder of
+;; division of a by b.
+forth_asm TIMESMOD, '/MOD'
+  pop rbx                       ; b
+  pop rax                       ; a
+  mov rdx, 0
+  div rbx
+  push rax                      ; a / b
+  push rdx                      ; a % b
+  next
+
 ;; Get the location of the STATE variable. It can be set with '!' and read with
 ;; '@'.
 forth STATE, 'STATE'

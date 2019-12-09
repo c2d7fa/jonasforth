@@ -9,3 +9,7 @@ EXIT [
   [ S" [" FIND >CFA , ]
   EXIT
 [ IMMEDIATE
+
+: / /MOD DROP ;
+: MOD /MOD SWAP DROP ;
+: NEG 0 SWAP - ;
