@@ -1,5 +1,39 @@
 segment readable executable
 
+macro printlen msg, len {
+  push rsi
+  add rsp, 8
+
+  mov rsi, msg
+  mov rdx, len
+  mov rax, 1
+  mov rdi, 1
+  syscall
+
+  sub rsp, 8
+  pop rsi
+}
+
+macro newline {
+  push $A
+  printlen rsp, 1
+}
+
+macro print msg {
+  printlen msg, msg#.len
+}
+
+macro exit code {
+  mov rax, $3C
+  mov rdi, code
+  syscall
+}
+
+struc string bytes {
+  . db bytes
+  .len = $ - .
+}
+
 ;; Find the given word in the dictionary of words. If no such word exists,
 ;; return 0.
 ;;
@@ -125,11 +159,14 @@ parse_number:
   ;; Now, rax = 10^(rcx - 1).
 
   ;; We need to calulate the value of the character at rdi[length - rcx].
-  mov rbx, rdi
+   mov rbx, rdi
   add rbx, [.length]
   sub rbx, rcx
   movzx rbx, byte [rbx]
   sub rbx, '0'
+
+  cmp rbx, 10
+  jae .error
 
   ;; Multiply this value by rax to get (10^(rcx-1) * parse_char(rdi[length - rcx])),
   ;; then add this to the result.
@@ -144,6 +181,13 @@ parse_number:
   mov rax, r8
   ret
 
+.error:
+  push rdi
+  print parse_number.error_msg
+  pop rdi
+  printlen rdi, [.length]
+  newline
+  exit 100
 
 segment readable writable
 
@@ -156,4 +200,5 @@ read_word.length db ?
 read_word.char_buffer db ?
 
 parse_number.length dq ?
+parse_number.error_msg string "Invalid number: "
 
