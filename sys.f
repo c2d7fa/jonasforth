@@ -13,3 +13,16 @@ EXIT [
 : / /MOD DROP ;
 : MOD /MOD SWAP DROP ;
 : NEG 0 SWAP - ;
+
+: IF IMMEDIATE
+  ' 0BRANCH ,
+  HERE @
+  0 ,
+;
+
+: THEN IMMEDIATE
+  DUP
+  HERE @ SWAP -
+  SWAP !
+;
+

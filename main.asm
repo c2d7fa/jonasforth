@@ -288,18 +288,19 @@ forth INTERPRET, 'INTERPRET'
   ;; Stack is (word length word length).
   dq FIND                       ; Try to find word
   dq DUP_
-  dq ZBRANCH, 8 * 20            ; Check if word is found
+  dq ZBRANCH, 8 * 22            ; Check if word is found
 
   ;; - Word is found -
 
-  dq STATE, GET, ZBRANCH, 8 * 9 ; Check whether we are in compilation or immediate mode
+  dq STATE, GET, ZBRANCH, 8 * 11 ; Check whether we are in compilation or immediate mode
 
   ;; (Word found, compilation mode)
-  dq DUP_, IS_IMMEDIATE, NOT_, ZBRANCH, 8 * 4 ; If the word is immediate, continue as we would in immediate mode
+  dq DUP_, IS_IMMEDIATE, NOT_, ZBRANCH, 8 * 6 ; If the word is immediate, continue as we would in immediate mode
 
   ;; Otherwise, we want to compile this word
   dq TCFA
   dq COMMA
+  dq DROP, DROP
   dq EXIT
 
   ;; (Word found, immediate mode)
@@ -557,6 +558,11 @@ forth OUTOF_IMMEDIATE, ']'
   dq LIT, 1, STATE, PUT_BYTE
   dq EXIT
 
+forth_asm TICK, "'"
+  lodsq
+  push rax
+  next
+
 forth MAIN, 'MAIN'
   dq HELLO
   dq INTERPRET
@@ -591,7 +597,7 @@ DOTU.printed_length dq ?
 
 ;; Reserve space for compiled words, accessed through HERE.
 here dq here_top
-here_top rq $2000
+here_top rq $4000
 
 ;; Return stack
 rq $2000
