@@ -10,10 +10,6 @@ EXIT [
   EXIT
 [ IMMEDIATE
 
-: / /MOD DROP ;
-: MOD /MOD SWAP DROP ;
-: NEG 0 SWAP - ;
-
 : IF IMMEDIATE
   ' 0BRANCH ,
   HERE @
@@ -37,33 +33,56 @@ EXIT [
   HERE @
 ;
 
+: AGAIN IMMEDIATE
+  ' BRANCH ,
+  HERE @ - , ;
+
+: ( IMMEDIATE
+  BEGIN
+    READ-WORD
+    1 = IF
+      C@ 41 = IF
+        EXIT
+      THEN
+    ELSE
+      DROP
+    THEN
+  AGAIN ;
+
 : UNTIL IMMEDIATE
   ' 0BRANCH ,
   HERE @ - ,
 ;
 
-: FIB
-  0 1
-  0
-  BEGIN
-    ROT
-    DUP ROT +
-    ROT ROT
+( Compile a literal value into the current word. )
+: LIT, IMMEDIATE ( x -- )
+  ' LIT , , ;
 
-    1 +
+: / /MOD DROP ;
+: MOD /MOD SWAP DROP ;
+: NEG 0 SWAP - ;
+
+: FIB ( n -- Fn )
+  0 1                            ( n a b )
+  0                              ( n a b i )
+  BEGIN
+    ROT                          ( n i a b )
+    DUP ROT +                    ( n i b a+b )
+    ROT ROT                      ( n b a+b i )
+
+    1 +                          ( n b a+b i+1 )
   DUP 4 PICK = UNTIL
-  DROP SWAP DROP SWAP DROP
-;
+  DROP SWAP DROP SWAP DROP ;     ( a+b )
 
 : C,
   HERE @ C!
   HERE @ 1 +
   HERE ! ;
 
-: OVER
-  SWAP DUP ROT ;
+: OVER ( a b -- a b a ) SWAP DUP ROT ;
 
-: STORE-STRING
+( Compile the given string into the current word directly. )
+: STORE-STRING ( str len -- )
   BEGIN
     OVER C@ C,
     SWAP 1 + SWAP
@@ -74,7 +93,7 @@ S" HELLO-ADDR" CREATE
 S" Hello!" DUP ROT
 STORE-STRING
 : HELLO
-  ' HELLO-ADDR LIT [ , ] TELL NEWLINE ;
+  ' HELLO-ADDR LIT, TELL NEWLINE ;
 
 HELLO
 
@@ -82,3 +101,4 @@ S" 10 FIB = " TELL
 10 FIB .U
 S"  (Expected: 59)" TELL NEWLINE
 
+TERMINATE
