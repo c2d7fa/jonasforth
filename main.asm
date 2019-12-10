@@ -235,16 +235,6 @@ forth_asm TERMINATE, 'TERMINATE'
   mov rdi, 0
   syscall
 
-forth HELLO, 'HELLO'
-  dq LIT, 'H', EMIT
-  dq LIT, 'e', EMIT
-  dq LIT, 'l', EMIT
-  dq LIT, 'l', EMIT
-  dq LIT, 'o', EMIT
-  dq LIT, '!', EMIT
-  dq NEWLINE
-  dq EXIT
-
 ;; Duplicate a pair of elements.
 forth_asm PAIRDUP, '2DUP'
   pop rbx
@@ -592,7 +582,6 @@ forth_asm EQL, '='
   next
 
 forth MAIN, 'MAIN'
-  dq HELLO
   dq INTERPRET
   dq BRANCH, -8 * 2
   dq TERMINATE
