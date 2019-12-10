@@ -96,8 +96,8 @@ read_word:
 ;; Parses a string.
 ;;
 ;; Parameters:
-;;   * [.length] = Length of string
-;;   * [.buffer] = Pointer to string buffer
+;;   * rcx = Length of string
+;;   * rdi = Pointer to string buffer
 ;;
 ;; Results:
 ;;   * rax = Value
@@ -108,7 +108,7 @@ parse_number:
 
   ;; Add (10^(rcx-1) * parse_char(rdi[length - rcx])) to the accumulated value
   ;; for each rcx.
-  mov rcx, [.length]
+  mov [.length], rcx
 .loop:
   ;; First, calcuate 10^(rcx - 1)
   mov rax, 1
@@ -155,6 +155,5 @@ read_word.buffer rb read_word.max_size
 read_word.length db ?
 read_word.char_buffer db ?
 
-parse_number.buffer dq ?
 parse_number.length dq ?
 

@@ -198,8 +198,8 @@ forth_asm READ_WORD, 'READ-WORD'
 ;; Takes a string on the stack and replaces it with the decimal number that the
 ;; string represents.
 forth_asm PARSE_NUMBER, 'PARSE-NUMBER'
-  pop [parse_number.length]     ; Length
-  pop [parse_number.buffer]     ; String pointer
+  pop rcx     ; Length
+  pop rdi     ; String pointer
 
   push rsi
   call parse_number
