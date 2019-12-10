@@ -563,6 +563,34 @@ forth_asm TICK, "'"
   push rax
   next
 
+forth_asm ROT, 'ROT'
+  pop rax
+  pop rbx
+  pop rdx
+  push rax
+  push rdx
+  push rbx
+  next
+
+forth_asm PICK, 'PICK'
+  pop rax
+  lea rax, [rsp + 8 * rax]
+  mov rax, [rax]
+  push rax
+  next
+
+forth_asm EQL, '='
+  pop rax
+  pop rbx
+  cmp rax, rbx
+  je .eq
+.noteq:
+  push 0
+  next
+.eq:
+  push 1
+  next
+
 forth MAIN, 'MAIN'
   dq HELLO
   dq INTERPRET

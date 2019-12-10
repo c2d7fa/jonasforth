@@ -33,3 +33,29 @@ EXIT [
   SWAP DUP HERE @ SWAP - SWAP !
 ;
 
+: BEGIN IMMEDIATE
+  HERE @
+;
+
+: UNTIL IMMEDIATE
+  ' 0BRANCH ,
+  HERE @ - ,
+;
+
+: FIB
+  0 1
+  0
+  BEGIN
+    ROT
+    DUP ROT +
+    ROT ROT
+
+    1 +
+  DUP 4 PICK = UNTIL
+  DROP SWAP DROP SWAP DROP
+;
+
+S" 10 FIB = " TELL
+10 FIB .U
+S"  (Expected: 59)" TELL NEWLINE
+
