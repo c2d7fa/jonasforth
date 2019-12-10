@@ -26,3 +26,10 @@ EXIT [
   SWAP !
 ;
 
+: ELSE IMMEDIATE
+  ' BRANCH ,
+  HERE @
+  0 ,
+  SWAP DUP HERE @ SWAP - SWAP !
+;
+
