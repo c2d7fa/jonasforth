@@ -14,6 +14,22 @@ The `example.f` file contains an example that you can run with:
 
     $ cat sys.f example.f | ./main
 
+## Running with UEFI
+
+We are currently in the process of implementing support for running without
+Linux, by instead relying on UEFI. Eventually, this will be the only supported
+method of running the interpreter, but currently the UEFI-related code is
+isolated in the `uefi/` directory and does not yet contain an implementation of
+the main program.
+
+You should have the following dependencies installed (assuming Arch Linux):
+
+    $ pacman -S qemu ovmf
+
+To run a UEFI shell inside qemu, cd to `uefi/` and run:
+
+    $ make run
+
 # Notes on implementation
 
 This is my summary of the most important parts of
@@ -21,7 +37,8 @@ https://raw.githubusercontent.com/nornagon/jonesforth/master/jonesforth.S.
 
 ## Dictionary
 
-In Forth, words are stored in a dictionary. The dictionary is a linked list whose entries look like this:
+In Forth, words are stored in a dictionary. The dictionary is a linked list
+whose entries look like this:
 
     +------------------------+--------+---------- - - - - +----------- - - - -
     | LINK POINTER           | LENGTH/| NAME              | DEFINITION
@@ -155,3 +172,48 @@ then switches back to immediate mode.
 These words rely on `,` to append words to the currently compiling definition.
 This word simply appends some literal value to `HERE` and moves the `HERE`
 pointer forward.
+
+# Notes on UEFI
+
+`JONASFORTH` is runs without an operating system, instead using the facilities
+provided by UEFI by running as a UEFI application. (Or rather, in the future it
+hopefully will. Right now, it uses Linux.) This section contains some notes
+about how this functionality is implemented.
+
+## Packaging and testing the image
+
+* [ ] What should the image look like?
+* [ ] How to build the image (which programs, commands, etc.)
+* [ ] How do we run the application in QEMU
+
+## Interfacing with UEFI
+
+From [OSDev Wiki](https://wiki.osdev.org/UEFI#How_to_use_UEFI):
+
+>Traditional operating systems like Windows and Linux have an existing software
+>architecture and a large code base to perform system configuration and device
+>discovery. With their sophisticated layers of abstraction they don't directly
+>benefit from UEFI. As a result, their UEFI bootloaders do little but prepare
+>the environment for them to run.
+>
+>An independent developer may find more value in using UEFI to write
+>feature-full UEFI applications, rather than viewing UEFI as a temporary
+>start-up environment to be jettisoned during the boot process. Unlike legacy
+>bootloaders, which typically interact with BIOS only enough to bring up the OS,
+>a UEFI application can implement sophisticated behavior with the help of UEFI.
+>In other words, an independent developer shouldn't be in a rush to leave
+>"UEFI-land".
+
+For `JONASFORTH`, I have decided to run as a UEFI application, taking advantage
+of UEFI's features, including its text I/O features and general graphical device
+drivers. Eventually, we would like to add some basic graphical drawing
+capabilities to `JONASFORTH`, and it's my impression that this would be possible
+using what is provided to us by UEFI.
+
+* [ ] How to register as a UEFI application
+* [ ] How to use UEFI provided functions
+
+## Resources
+
+* https://wiki.osdev.org/UEFI
+* https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
