@@ -1,10 +1,18 @@
-FASM:
-- https://flatassembler.net/docs.php?article=fasmg (Introduction)
-- https://flatassembler.net/docs.php?article=fasmg_manual (Manual)
-- https://flatassembler.net/docs.php?article=manual (Other manual)
+# Building and running
 
-JONESFORTH:
-- https://github.com/nornagon/jonesforth/blob/master/jonesforth.S
+Create the executable:
+
+    $ make main
+
+The `sys.f` file contains code that defines some of the usual words that you
+would expect in a Forth distribution. To run this code and then read from
+standard input, run:
+
+    $ cat sys.f - | ./main
+
+The `example.f` file contains an example that you can run with:
+
+    $ cat sys.f example.f | ./main
 
 # Notes on implementation
 
