@@ -30,6 +30,10 @@ To run a UEFI shell inside qemu, cd to `uefi/` and run:
 
     $ make run
 
+### Running on read hardware
+
+* [ ] This is not supported yet
+
 # Notes on implementation
 
 This is my summary of the most important parts of
@@ -182,9 +186,20 @@ about how this functionality is implemented.
 
 ## Packaging and testing the image
 
-* [ ] What should the image look like?
-* [ ] How to build the image (which programs, commands, etc.)
-* [ ] How do we run the application in QEMU
+UEFI expects a UEFI application to be stored in a FAT32 file system on a
+GPT-partitioned disk.
+
+Luckily, QEMU has a convenient way of making a subdirectory availabe as a
+FAT-formatted disk (see [the relevant section in the QEMU User
+Documentation](https://qemu.weilnetz.de/doc/qemu-doc.html#disk_005fimages_005ffat_005fimages)
+for more information):
+
+    $ qemu-sytem-x86_64 ... -hda fat:/some/directory
+
+We use this to easily test the image in QEMU; see the Makefile for more information.
+
+* [ ] How to build the image for real hardware (what should the image look like,
+  which programs, commands, etc.)
 
 ## Interfacing with UEFI
 
@@ -210,10 +225,73 @@ drivers. Eventually, we would like to add some basic graphical drawing
 capabilities to `JONASFORTH`, and it's my impression that this would be possible
 using what is provided to us by UEFI.
 
-* [ ] How to register as a UEFI application
-* [ ] How to use UEFI provided functions
+A UEFI images is basically a windows EXE without symbol tables. There are three
+types of UEFI images; we use the EFI application, which has subsystem `10`. It
+is an x68-64 image, which has value `0x8664`.
+
+UEFI applications use [Microsoft's 64-bit calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention) for x68-64 functions. See the linked article for a full description. Here is the short version:
+
+* Integer or pointer arguments are given in RCX, RDX, R8 and R9.
+* Additional arguments are pushed onto the stack from right to left.
+* Integer or pointer values are returned in RAX.
+* An integer-sized struct is passed directly; non-integer-sized structs are passed as pointers.
+* The caller must allocate 32 bytes of "shadow space" on the stack immediately
+  before calling the function, regardless of the number of parameters used, and
+  the caller is responsible for popping the stack afterwards.
+* The following registers are volatile (caller-saved): RAX, RCX, RDX, R8, R9, R10, R11
+* The following registers are nonvolatile (callee-saved): RBX, RBP, RDI, RSI, RSP, R12, R13, R14, R15
+
+When the application is loaded, RCX contains a firmware allocated `EFI_HANDLE`
+for the UEFI image, RDX contains a `EFI_SYSTEM_TABLE*` pointer to the EFI system
+table and RSP contains the return address. For more infromation about how a UEFI
+application is entered, see "4 - EFI System Table" in [the latest UEFI
+specification as of March 2020 (PDF)](https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_A_Feb14.pdf).
+
+**Sources:**
+
+* [UEFI applications in detail - OSDev Wiki](https://wiki.osdev.org/UEFI#UEFI_applications_in_detail)
+* [Microsoft x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention)
+* [UEFI Specifications](https://uefi.org/specifications)
+
+### UEFI with FASM
+
+We might want to consider using something like this: https://wiki.osdev.org/Uefi.inc)
+
+FASM can generate UEFI application binaries by default. Use the following
+template to output a 64-bit UEFI application:
+
+    format pe64 dll efi
+    entry main
+
+    section '.text' code executable readable
+
+    main:
+       ;; ...
+       ret
+
+    section '.data' data readable writable
+
+    ;; ...
+
+Use `objdump -x` to inspect the assembled application binary.
+
+### UEFI documentation
+
+* [Latest specification as of March 2020 (PDF)](https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_A_Feb14.pdf)
+
+Notable sections:
+
+* 2\. Overview (14)
+* 4\. EFI System Table (89)
+* 7\. Services - Boot Services (140)
+* 8\. Services - Runtime Services (228)
+* 12\. Protocols - Console Support (429)
+* Appendix B - Console (2201)
+* Appendix D - Status Codes (2211)
+
 
 ## Resources
 
-* https://wiki.osdev.org/UEFI
-* https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface
+* [UEFI - OSDev Wiki](https://wiki.osdev.org/UEFI)
+* [Unified Extensible Firmware Interface (Wikipedia)](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface)
+* [UEFI Specifications](https://uefi.org/specifications)
