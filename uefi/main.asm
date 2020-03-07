@@ -7,11 +7,14 @@ entry main
 ;; - [X] Print a string of a given length
 ;; - [ ] Print a single character
 ;; - [ ] Terminate the program (? - What should this do?)
-;; - [ ] Read a single character
+;; - [X] Read a single character
 ;;       - This should allow the user to type in a string, and then feed the
 ;;         buffer to us one character at a time.
+;;       - [ ] We want to show the user's input on the screen while reading
 
 ;; #region Structs
+
+EFI_NOT_READY = 0x8000_0000_0000_0000 or 6
 
 ;; Based on https://wiki.osdev.org/Uefi.inc
 macro struct name {
@@ -48,6 +51,20 @@ struc EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL {
 }
 struct EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
 
+struc EFI_SIMPLE_TEXT_INPUT_PROTOCOL {
+  .Reset dq ? ; EFI_INPUT_RESET
+  .ReadKeyStroke dq ? ; EFI_INPUT_READ_KEY
+  ; ...
+}
+struct EFI_SIMPLE_TEXT_INPUT_PROTOCOL
+
+struc EFI_INPUT_KEY {
+  .ScanCode dw ? ; UINT16
+  .UnicodeChar dw ? ; CHAR16
+  align 8
+}
+struct EFI_INPUT_KEY
+
 ;; #endregion
 
 section '.text' code executable readable
@@ -60,8 +77,11 @@ main:
   mov rdx, hello_string.len
   call print_string
 
-  mov rcx, hello_string
-  mov rdx, hello_string.len
+  mov rcx, char_buffer
+  call read_char
+
+  mov rcx, char_buffer
+  mov rdx, 1
   call print_string
 
   mov rcx, hello_string
@@ -117,6 +137,30 @@ print_string:
   add rsp, 32
   ret
 
+;; Read a character as an ASCII byte into the given buffer.
+;;
+;; Inputs:
+;; - RCX = Character buffer (1 byte)
+read_char:
+  mov r15, rcx
+.read_key:
+  mov rcx, [system_table] ; EFI_SYSTEM_TABLE* rcx
+  mov rcx, [rcx + EFI_SYSTEM_TABLE.ConIn] ; EFI_SIMPLE_TEXT_INPUT_PROTOCOL* rcx
+  mov rbx, [rcx + EFI_SIMPLE_TEXT_INPUT_PROTOCOL.ReadKeyStroke] ; EFI_INPUT_READ_KEY rbx
+  mov rdx, input_key ; EFI_INPUT_KEY* rdx
+  sub rsp, 32
+  call rbx
+  add rsp, 32
+
+  mov r8, EFI_NOT_READY
+  cmp rax, r8
+  je .read_key
+
+  mov ax, [input_key.UnicodeChar]
+  mov [r15], al
+
+  ret
+
 section '.data' readable writable
 
 system_table dq ?  ; EFI_SYSTEM_TABLE*
@@ -125,3 +169,7 @@ hello_string db 'Hello, world!', 0xD, 0xA, 'Here is some more text.', 0xD, 0xA
 .len = $ - hello_string
 
 print_string.output_buffer rq 0x400
+
+char_buffer db ?
+
+input_key EFI_INPUT_KEY
