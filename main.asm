@@ -2,6 +2,34 @@
 
 format ELF64 executable
 
+;; "Syscalls" {{{
+
+;; [NOTE] Volatile registers Linux (syscalls) vs UEFI
+;;
+;;   Linux syscalls: RAX, RCX, R11
+;;   UEFI:           RAX, RCX, R11, RDX, R8, R9, R10
+
+;; We are in the process of replacing our dependency on Linux with a dependency
+;; on UEFI. The following macros attempt to isolate what would be syscalls in
+;; Linux; thus, we will be able to replace these with UEFI-based implementations,
+;; and in theory we should expect the program to work.
+
+;; Print a string of a given length.
+;;
+;; Input:
+;; - RCX = Pointer to buffer
+;; - RDX = Buffer length
+;;
+;; Clobbers: RAX, RCX, R11, RDI, RSI
+macro sys_print_string {
+  mov rax, 1
+  mov rdi, 1
+  mov rsi, rcx
+  syscall
+}
+
+;; }}}
+
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
 ;; next word in that definition.
@@ -163,11 +191,11 @@ forth_asm EXEC, 'EXEC'
 forth_asm EMIT, 'EMIT'
   pushr rsi
   pushr rax
-  mov rax, 1
-  mov rdi, 1
-  lea rsi, [rsp]
+
+  lea rcx, [rsp]
   mov rdx, 1
-  syscall
+  sys_print_string
+
   add rsp, 8
   popr rax
   popr rsi
@@ -218,17 +246,15 @@ forth READ_NUMBER, 'READ-NUMBER'
 ;; Takes a string (in the form of a pointer and a length on the stack) and
 ;; prints it to standard output.
 forth_asm TELL, 'TELL'
-  mov rbx, rsi
-  mov rcx, rax
+  pushr rax
+  pushr rsi
 
-  mov rax, 1
-  mov rdi, 1
-  pop rdx     ; Length
-  pop rsi     ; Buffer
-  syscall
+  pop rdx ; Length
+  pop rcx ; Buffer
+  sys_print_string
 
-  mov rax, rcx
-  mov rsi, rbx
+  popr rsi
+  popr rax
   next
 
 ;; Exit the program cleanly.
@@ -371,11 +397,9 @@ forth_asm DOTU, '.U'
   loop .flip
 
   ;; Print the buffer
-  mov rax, 1
-  mov rdi, 1
-  mov rsi, .buffer
+  mov rcx, .buffer
   mov rdx, [.printed_length]
-  syscall
+  sys_print_string
 
   ;; Restore RSI and continue execution
   pop rsi
