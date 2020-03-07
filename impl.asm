@@ -1,3 +1,5 @@
+;; vim: syntax=fasm
+
 segment readable executable
 
 macro printlen msg, len {

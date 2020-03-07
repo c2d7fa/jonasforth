@@ -1,3 +1,5 @@
+;; vim: syntax=fasm
+
 format ELF64 executable
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
