@@ -442,6 +442,47 @@ forth_asm READ_STRING, 'S"'
 
   next
 
+;; BUF" works a bit like S, but it reads the string from the current input
+;; buffer described in INPUT-BUFFER and INPUT-LENGTH. We use this fucntion in
+;; sys.f to store strings.
+forth_asm BUF_READ_STRING, 'BUF"'
+  push rsi
+
+  ;; We borrow READ_STRING's buffer. They won't mind.
+  mov [READ_STRING.length], 0
+
+  ;; Skip space ([TODO]: Shouldn't we do this while parsing instead?)
+  inc [input_buffer]
+  dec [input_buffer_length]
+
+.read_char:
+  mov rbx, [input_buffer]
+  mov al, [rbx]
+  cmp al, '"'
+  je .done
+
+  mov rdx, READ_STRING.buffer
+  add rdx, [READ_STRING.length]
+  mov [rdx], al
+  inc [READ_STRING.length]
+
+  inc [input_buffer]
+  dec [input_buffer_length]
+
+  jmp .read_char
+
+.done:
+  pop rsi
+
+  ;; Skip closing "
+  inc [input_buffer]
+  dec [input_buffer_length]
+
+  push READ_STRING.buffer
+  push [READ_STRING.length]
+
+  next
+
 ;; CREATE inserts a new header in the dictionary, and updates LATEST so that it
 ;; points to the header. To compile a word, the user can then call ',' to
 ;; continue to append data after the header.
