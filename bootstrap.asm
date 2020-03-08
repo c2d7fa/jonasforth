@@ -111,11 +111,13 @@ forth INTERPRET_STRING, 'INTERPRET-STRING'
   ;; Check if the buffer is-non-empty
   ;; [TODO] This probably won't work for strings with whitespace at the end.
   dq INPUT_LENGTH, GET
-  dq ZBRANCH, 8 * 7 ; to EXIT
+  dq ZBRANCH, 8 * 5 ; to EXIT
 
   dq READ_WORD
 
   dq INTERPRET_WORD
   dq BRANCH, -8 * 7 ; to INPUT-LENGTH @
+
+  dq LIT, 0, INPUT_BUFFER, PUT
 
   dq EXIT

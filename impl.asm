@@ -177,6 +177,9 @@ pop_word:
   jmp .read_alpha
 
 .end:
+  ;; Finally, we want to skip one whitespace character after the word.
+  inc rsi
+  dec rcx
 
   ret
 

@@ -452,10 +452,6 @@ read_string_buffer:
   ;; We borrow READ_STRING's buffer. They won't mind.
   mov [READ_STRING.length], 0
 
-  ;; Skip space ([TODO]: Shouldn't we do this while parsing instead?)
-  inc [input_buffer]
-  dec [input_buffer_length]
-
 .read_char:
   mov rbx, [input_buffer]
   mov al, [rbx]

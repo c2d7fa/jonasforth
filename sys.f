@@ -83,5 +83,7 @@ EXIT [
 ( Read a number from standard input. )
 : READ-NUMBER READ-WORD PARSE-NUMBER ;
 
+S" Ready." TELL NEWLINE
+
 ( vim: syntax=forth
 )
