@@ -47,11 +47,10 @@ forth OUTOF_IMMEDIATE, ']'
   dq LIT, 1, STATE, PUT_BYTE
   dq EXIT
 
-;; The INTERPRET word reads and interprets user input. It's behavior depends on
-;; the current STATE. It provides special handling for integers.
-forth INTERPRET, 'INTERPRET'
-  ;; Read word
-  dq READ_WORD
+;; INTERPRET-WORD expects a word as a (buffer, length) pair on the stack. It
+;; interprets and executes the word. It's behavior depends on the current STATE.
+;; It provides special handling for integers.
+forth INTERPRET_WORD, 'INTERPRET-WORD'
   dq PAIRDUP
   ;; Stack is (word length word length).
   dq FIND                       ; Try to find word
@@ -94,4 +93,10 @@ forth INTERPRET, 'INTERPRET'
   dq EXIT
 
   ;; (Number, immediate mode)
+  dq EXIT
+
+;; The INTERPRET word reads and interprets a single word from the user.
+forth INTERPRET, 'INTERPRET'
+  dq READ_WORD
+  dq INTERPRET_WORD
   dq EXIT
