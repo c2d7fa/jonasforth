@@ -195,9 +195,14 @@ forth_asm EMIT, 'EMIT'
   popr rsi
   next
 
-;; Read a word from standard input and push it onto the stack as a pointer and a
-;; size. The pointer is valid until the next call to READ_WORD.
+;; Read a word and push it onto the stack as a pointer and a size. The pointer
+;; is valid until the next call to READ_WORD.
 forth_asm READ_WORD, 'READ-WORD'
+  ;; Are we reading from user input or from the input buffer?
+  cmp [input_buffer], 0
+  jne .from_buffer
+
+  ;; Reading user input
   mov [.rsi], rsi
 
   call read_word
@@ -207,23 +212,21 @@ forth_asm READ_WORD, 'READ-WORD'
   mov rsi, [.rsi]
   next
 
-;; Read a word from a buffer. Expects (buffer buffer-length) on the stack.
-;; Updates buffer and buffer-length, such that the word has been removed from
-;; the buffer. Appends (word-buffer word-buffer-length) to the stack.
-forth_asm POP_WORD, 'POP-WORD'
-  pushr rsi
+.from_buffer:
+  ;; Reading from buffer
+  mov [.rsi], rsi
 
-  pop rcx ; Length
-  pop rsi ; Buffer
+  mov rsi, [input_buffer]
+  mov rcx, [input_buffer_length]
 
   call pop_word
 
-  push rsi ; Updated buffer
-  push rcx ; Length of updated buffer
-  push rdi ; Word buffer
-  push rdx ; Length of word buffer
+  mov [input_buffer], rsi        ; Updated buffer
+  mov [input_buffer_length], rcx ; Length of updated buffer
+  push rdi                       ; Word buffer
+  push rdx                       ; Length of word buffer
 
-  popr rsi
+  mov rsi, [.rsi]
   next
 
 ;; Takes a string on the stack and replaces it with the decimal number that the
@@ -406,13 +409,14 @@ forth_asm TIMESMOD, '/MOD'
   push rdx                      ; a % b
   next
 
-;; Read user input until next " character is found. Push a string containing the
+;; Read input until next " character is found. Push a string containing the
 ;; input on the stack as (buffer length). Note that the buffer is only valid
 ;; until the next call to S" and that no more than 255 characters can be read.
-;;
-;; [TODO] We want to be able to use this when reading from buffers (e.g. in
-;; INTERPRET-STRING) too!
 forth_asm READ_STRING, 'S"'
+  ;; If the input buffer is set, we should read from there instead.
+  cmp [input_buffer], 0
+  jne read_string_buffer
+
   push rsi
 
   mov [.length], 0
@@ -442,10 +446,7 @@ forth_asm READ_STRING, 'S"'
 
   next
 
-;; BUF" works a bit like S, but it reads the string from the current input
-;; buffer described in INPUT-BUFFER and INPUT-LENGTH. We use this fucntion in
-;; sys.f to store strings.
-forth_asm BUF_READ_STRING, 'BUF"'
+read_string_buffer:
   push rsi
 
   ;; We borrow READ_STRING's buffer. They won't mind.
@@ -594,6 +595,12 @@ latest_entry dq initial_latest_entry
 ;; it is compiling.
 var_STATE dq 0
 
+;; The interpreter can read either from standard input or from a buffer. When
+;; input-buffer is set (non-null), words like READ-WORD and S" will use this
+;; buffer instead of reading user input.
+input_buffer dq 0
+input_buffer_length dq 0
+
 FIND.rsi dq ?
 
 READ_WORD.rsi dq ?
@@ -612,12 +619,6 @@ DOTU.printed_length dq ?
 ;; Reserve space for compiled words, accessed through HERE.
 here dq here_top
 here_top rq $4000
-
-;; Pointer to input buffer and its length. Used as local variable in
-;; INTERPRET-STRING (see bootstrap.asm). [TODO] The code organization is a bit
-;; awkward here.
-input_buffer dq ?
-input_buffer_length dq ?
 
 ;; Return stack
 rq $2000
