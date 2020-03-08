@@ -1,3 +1,6 @@
+( vim: syntax=forth
+)
+
 : FIB ( n -- Fn )
   0 1                            ( n a b )
   0                              ( n a b i )
@@ -20,6 +23,6 @@ HELLO
 
 S" 10 FIB = " TELL
 10 FIB .U
-S"  (Expected: 59)" TELL NEWLINE
+SPACE S" (Expected: 59)" TELL NEWLINE
 
 TERMINATE

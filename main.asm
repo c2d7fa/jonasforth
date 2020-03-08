@@ -87,18 +87,12 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
-;; Define a Forth word that is implemented in Forth. (The body will be a list of
-;; 'dq' statements.)
-macro forth label, name, immediate {
-  header label, name, immediate
-  dq DOCOL
-}
-
 segment readable executable
 
 entry main
 
-include "impl.asm"
+include "impl.asm"      ; Misc. subroutines
+include "bootstrap.asm" ; Forth words encoded in Assembly
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
@@ -201,18 +195,6 @@ forth_asm EMIT, 'EMIT'
   popr rsi
   next
 
-;; Prints a newline to standard output.
-forth NEWLINE, 'NEWLINE'
-  dq LIT, $A
-  dq EMIT
-  dq EXIT
-
-;; Prints a space to standard output.
-forth SPACE, 'SPACE'
-  dq LIT, ' '
-  dq EMIT
-  dq EXIT
-
 ;; Read a word from standard input and push it onto the stack as a pointer and a
 ;; size. The pointer is valid until the next call to READ_WORD.
 forth_asm READ_WORD, 'READ-WORD'
@@ -237,11 +219,6 @@ forth_asm PARSE_NUMBER, 'PARSE-NUMBER'
 
   push rax                      ; Result
   next
-
-forth READ_NUMBER, 'READ-NUMBER'
-  dq READ_WORD
-  dq PARSE_NUMBER
-  dq EXIT
 
 ;; Takes a string (in the form of a pointer and a length on the stack) and
 ;; prints it to standard output.
@@ -296,55 +273,6 @@ forth_asm NOT_, 'NOT'
 .false:
   push 1
   next
-
-;; The INTERPRET word reads and interprets user input. It's behavior depends on
-;; the current STATE. It provides special handling for integers.
-forth INTERPRET, 'INTERPRET'
-  ;; Read word
-  dq READ_WORD
-  dq PAIRDUP
-  ;; Stack is (word length word length).
-  dq FIND                       ; Try to find word
-  dq DUP_
-  dq ZBRANCH, 8 * 22            ; Check if word is found
-
-  ;; - Word is found -
-
-  dq STATE, GET, ZBRANCH, 8 * 11 ; Check whether we are in compilation or immediate mode
-
-  ;; (Word found, compilation mode)
-  dq DUP_, IS_IMMEDIATE, NOT_, ZBRANCH, 8 * 6 ; If the word is immediate, continue as we would in immediate mode
-
-  ;; Otherwise, we want to compile this word
-  dq TCFA
-  dq COMMA
-  dq DROP, DROP
-  dq EXIT
-
-  ;; (Word found, immediate mode)
-  ;; Execute word
-  dq TCFA
-  ;; Stack is (word length addr)
-  dq SWAP, DROP
-  dq SWAP, DROP
-  ;; Stack is (addr)
-  dq EXEC
-  dq EXIT
-
-  ;; - No word is found, assume it is an integer literal -
-  ;; Stack is (word length addr)
-  dq DROP
-  dq PARSE_NUMBER
-
-  dq STATE, GET, ZBRANCH, 8 * 5 ; Check whether we are in compilation or immediate mode
-
-  ;; (Number, compilation mode)
-  dq LIT, LIT, COMMA
-  dq COMMA
-  dq EXIT
-
-  ;; (Number, immediate mode)
-  dq EXIT
 
 ;; .U prints the value on the stack as an unsigned integer in hexadecimal.
 forth_asm DOTU, '.U'
@@ -459,31 +387,6 @@ forth_asm TIMESMOD, '/MOD'
   push rdx                      ; a % b
   next
 
-;; Get the location of the STATE variable. It can be set with '!' and read with
-;; '@'.
-forth STATE, 'STATE'
-  dq LIT, var_STATE
-  dq EXIT
-
-;; Get the location of the LATEST variable. It can be set with '!' and read with
-;; '@'.
-forth LATEST, 'LATEST'
-  dq LIT, latest_entry
-  dq EXIT
-
-;; Get the location at which compiled words are expected to be added. This
-;; pointer is usually modified automatically when calling ',', but we can also
-;; read it manually with 'HERE'.
-forth HERE, 'HERE'
-  dq LIT, here
-  dq EXIT
-
-forth COMMA, ','
-  dq HERE, GET, PUT             ; Set the memory at the address pointed to by HERE
-  dq HERE, GET, LIT, 8, PLUS    ; Calculate new address for HERE to point to
-  dq HERE, PUT                  ; Update HERE to point to the new address
-  dq EXIT
-
 ;; Read user input until next " character is found. Push a string containing the
 ;; input on the stack as (buffer length). Note that the buffer is only valid
 ;; until the next call to S" and that no more than 255 character can be read.
@@ -550,30 +453,6 @@ forth_asm CREATE, 'CREATE'
 
   next
 
-;; Mark the last added word as immediate.
-forth IMMEDIATE, 'IMMEDIATE', 1
-  dq LIT, 1
-  dq LATEST, GET
-  dq LIT, 8, PLUS
-  dq PUT_BYTE
-  dq EXIT
-
-;; Given the address of a word, return 0 if the given word is not immediate.
-forth IS_IMMEDIATE, 'IMMEDIATE?'
-  dq LIT, 8, PLUS
-  dq GET_BYTE
-  dq EXIT
-
-;; Enter immediate mode, immediately
-forth INTO_IMMEDIATE, '[', 1
-  dq LIT, 0, STATE, PUT_BYTE
-  dq EXIT
-
-;; Enter compilation mode
-forth OUTOF_IMMEDIATE, ']'
-  dq LIT, 1, STATE, PUT_BYTE
-  dq EXIT
-
 forth_asm TICK, "'"
   lodsq
   push rax
@@ -611,6 +490,20 @@ forth MAIN, 'MAIN'
   dq INTERPRET
   dq BRANCH, -8 * 2
   dq TERMINATE
+
+;; Built-in variables:
+
+forth STATE, 'STATE'
+  dq LIT, var_STATE
+  dq EXIT
+
+forth LATEST, 'LATEST'
+  dq LIT, latest_entry
+  dq EXIT
+
+forth HERE, 'HERE'
+  dq LIT, here
+  dq EXIT
 
 segment readable writable
 

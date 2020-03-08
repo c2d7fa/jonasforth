@@ -76,3 +76,12 @@ EXIT [
     SWAP 1 + SWAP
   1 - DUP 0 = UNTIL
   DROP DROP ;
+
+: NEWLINE 10 EMIT ;
+: SPACE 32 EMIT ;
+
+( Read a number from standard input. )
+: READ-NUMBER READ-WORD PARSE-NUMBER ;
+
+( vim: syntax=forth
+)
