@@ -408,7 +408,10 @@ forth_asm TIMESMOD, '/MOD'
 
 ;; Read user input until next " character is found. Push a string containing the
 ;; input on the stack as (buffer length). Note that the buffer is only valid
-;; until the next call to S" and that no more than 255 character can be read.
+;; until the next call to S" and that no more than 255 characters can be read.
+;;
+;; [TODO] We want to be able to use this when reading from buffers (e.g. in
+;; INTERPRET-STRING) too!
 forth_asm READ_STRING, 'S"'
   push rsi
 
@@ -506,6 +509,8 @@ forth_asm EQL, '='
   next
 
 forth MAIN, 'MAIN'
+  dq SYSCODE
+  dq INTERPRET_STRING
   dq INTERPRET
   dq BRANCH, -8 * 2
   dq TERMINATE
@@ -527,6 +532,14 @@ forth HERE, 'HERE'
 forth SYSCODE, 'SYSCODE'
   dq LIT, sysf
   dq LIT, sysf.len
+  dq EXIT
+
+forth INPUT_BUFFER, 'INPUT-BUFFER'
+  dq LIT, input_buffer
+  dq EXIT
+
+forth INPUT_LENGTH, 'INPUT-LENGTH'
+  dq LIT, input_buffer_length
   dq EXIT
 
 segment readable writable
@@ -558,6 +571,12 @@ DOTU.printed_length dq ?
 ;; Reserve space for compiled words, accessed through HERE.
 here dq here_top
 here_top rq $4000
+
+;; Pointer to input buffer and its length. Used as local variable in
+;; INTERPRET-STRING (see bootstrap.asm). [TODO] The code organization is a bit
+;; awkward here.
+input_buffer dq ?
+input_buffer_length dq ?
 
 ;; Return stack
 rq $2000
