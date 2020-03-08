@@ -129,6 +129,27 @@ read_word:
 
   ret
 
+;; Read a word from a buffer. Returns the buffer without the word, as well as
+;; the word that was read (including lengths).
+;;
+;; Inputs:
+;;   * rsi = Input buffer
+;;   * rcx = Length of buffer
+;;
+;; Outputs:
+;;   * rsi = Updated buffer
+;;   * rcx = Length of updated buffer
+;;   * rdi = Word buffer
+;;   * rdx = Length of word buffer
+pop_word:
+  mov rdi, rsi
+  mov rdx, 10
+
+  add rsi, 10
+  sub rcx, 10
+
+  ret
+
 ;; Parses a string.
 ;;
 ;; Parameters:

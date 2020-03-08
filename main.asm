@@ -207,6 +207,25 @@ forth_asm READ_WORD, 'READ-WORD'
   mov rsi, [.rsi]
   next
 
+;; Read a word from a buffer. Expects (buffer buffer-length) on the stack.
+;; Updates buffer and buffer-length, such that the word has been removed from
+;; the buffer. Appends (word-buffer word-buffer-length) to the stack.
+forth_asm POP_WORD, 'POP-WORD'
+  pushr rsi
+
+  pop rcx ; Length
+  pop rsi ; Buffer
+
+  call pop_word
+
+  push rsi ; Updated buffer
+  push rcx ; Length of updated buffer
+  push rdi ; Word buffer
+  push rdx ; Length of word buffer
+
+  popr rsi
+  next
+
 ;; Takes a string on the stack and replaces it with the decimal number that the
 ;; string represents.
 forth_asm PARSE_NUMBER, 'PARSE-NUMBER'
@@ -505,6 +524,11 @@ forth HERE, 'HERE'
   dq LIT, here
   dq EXIT
 
+forth SYSCODE, 'SYSCODE'
+  dq LIT, sysf
+  dq LIT, sysf.len
+  dq EXIT
+
 segment readable writable
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
@@ -538,3 +562,12 @@ here_top rq $4000
 ;; Return stack
 rq $2000
 return_stack_top:
+
+segment readable
+
+;; We store some Forth code in sys.f that defined common words that the user
+;; would expect to have available at startup. To execute these words, we just
+;; include the file directly in the binary, and then interpret it at startup.
+sysf file 'sys.f'
+sysf.len = $ - sysf
+

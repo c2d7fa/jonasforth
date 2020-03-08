@@ -2,7 +2,7 @@
 run: main
 	cat sys.f - | ./main
 
-main: main.asm impl.asm bootstrap.asm
+main: main.asm impl.asm bootstrap.asm sys.f
 	fasm $< $@
 
 .PHONY: clean
