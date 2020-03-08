@@ -11,8 +11,13 @@ entry main
 ;;       - This should allow the user to type in a string, and then feed the
 ;;         buffer to us one character at a time.
 ;;       - [ ] We want to show the user's input on the screen while reading
+;; - [ ] Read a file that was bundled with the program
+;;       - It looks like we can use EFI_LOAD_FILE_PROTOCOL.LoadFile() to load
+;;         a file into a buffer. In order to be able to use this, we need to
+;;         have some way of interpreting a static buffer instead of reading as
+;;         we go.
 
-;; #region Structs
+;; EFI struct definitions {{{
 
 EFI_NOT_READY = 0x8000_0000_0000_0000 or 6
 
@@ -65,7 +70,7 @@ struc EFI_INPUT_KEY {
 }
 struct EFI_INPUT_KEY
 
-;; #endregion
+;; }}}
 
 section '.text' code executable readable
 

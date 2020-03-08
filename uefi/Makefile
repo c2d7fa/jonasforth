@@ -1,5 +1,5 @@
 .PHONY: qemu
-qemu: out/main OVMF_CODE.fd OVMF_VARS.fd
+qemu: out/main out/hello OVMF_CODE.fd OVMF_VARS.fd
 	# Based on https://wiki.osdev.org/UEFI#Emulation_with_QEMU_and_OVMF
 	qemu-system-x86_64 -cpu qemu64 \
 		-drive if=pflash,format=raw,unit=0,file=OVMF_CODE.fd,readonly=on \
@@ -17,6 +17,10 @@ OVMF_VARS.fd: /usr/share/ovmf/x64/OVMF_VARS.fd
 out/main: main.asm
 	mkdir -p out
 	fasm $< out/main
+
+out/hello:
+	mkdir -p out
+	echo -e "Hello!\nThis is a test." > out/hello
 
 .PHONY: clean
 clean:
