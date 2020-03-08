@@ -142,11 +142,41 @@ read_word:
 ;;   * rdi = Word buffer
 ;;   * rdx = Length of word buffer
 pop_word:
-  mov rdi, rsi
-  mov rdx, 10
+.skip_whitespace:
+  mov al, [rsi]
+  cmp al, ' '
+  je .got_whitespace
+  cmp al, $A
+  je .got_whitespace
+  jmp .alpha
+.got_whitespace:
+  ;; The buffer starts with whitespace; discard the first character from the buffer.
+  inc rsi
+  dec rcx
+  jmp .skip_whitespace
 
-  add rsi, 10
-  sub rcx, 10
+.alpha:
+  ;; We got a character that wasn't whitespace. Now read the actual word.
+  mov rdi, rsi ; This is where the word starts
+  mov rdx, 1   ; Length of word
+
+.read_alpha:
+  ;; Extract character from original buffer:
+  inc rsi
+  dec rcx
+
+  ;; When we hit whitespace, we are done with this word
+  mov al, [rsi]
+  cmp al, ' '
+  je .end
+  cmp al, $A
+  je .end
+
+  ;; It wasn't whitespace; add it to word buffer
+  inc rdx
+  jmp .read_alpha
+
+.end:
 
   ret
 
