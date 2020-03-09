@@ -28,6 +28,28 @@ macro sys_print_string {
   syscall
 }
 
+;; Read a character from the user into the given buffer.
+;;
+;; Input:
+;; - RSI = Character buffer
+;;
+;; Output:
+;; - BYTE [RSI] = Character
+;;
+;; Clobbers: RAX, RCX, R11, RDI, RSI, RDX
+macro sys_read_char {
+  mov rax, 0
+  mov rdi, 0
+  mov rdx, 1
+  syscall
+}
+
+macro sys_terminate code {
+  mov rax, $3C
+  mov rdi, code
+  syscall
+}
+
 ;; }}}
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
@@ -258,9 +280,7 @@ forth_asm TELL, 'TELL'
 
 ;; Exit the program cleanly.
 forth_asm TERMINATE, 'TERMINATE'
-  mov rax, $3C
-  mov rdi, 0
-  syscall
+  sys_terminate 0
 
 ;; Duplicate a pair of elements.
 forth_asm PAIRDUP, '2DUP'
@@ -422,11 +442,8 @@ forth_asm READ_STRING, 'S"'
   mov [.length], 0
 
 .read_char:
-  mov rax, 0
-  mov rdi, 0
   mov rsi, .char_buffer
-  mov rdx, 1
-  syscall
+  sys_read_char
 
   mov al, [.char_buffer]
   cmp al, '"'

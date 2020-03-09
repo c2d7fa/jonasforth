@@ -6,11 +6,9 @@ macro printlen msg, len {
   push rsi
   add rsp, 8
 
-  mov rsi, msg
+  mov rcx, msg
   mov rdx, len
-  mov rax, 1
-  mov rdi, 1
-  syscall
+  sys_print_string
 
   sub rsp, 8
   pop rsi
@@ -23,12 +21,6 @@ macro newline {
 
 macro print msg {
   printlen msg, msg#.len
-}
-
-macro exit code {
-  mov rax, $3C
-  mov rdi, code
-  syscall
 }
 
 struc string bytes {
@@ -88,11 +80,8 @@ find:
 read_word:
 .skip_whitespace:
   ;; Read characters into .char_buffer until one of them is not whitespace.
-  mov rax, 0
-  mov rdi, 0
   mov rsi, .char_buffer
-  mov rdx, 1
-  syscall
+  sys_read_char
 
   ;; We consider newlines and spaces to be whitespace.
   cmp [.char_buffer], ' '
@@ -112,11 +101,8 @@ read_word:
   mov [rsi], al
   inc [.length]
 
-  mov rax, 0
-  mov rdi, 0
   mov rsi, .char_buffer
-  mov rdx, 1
-  syscall
+  sys_read_char
 
   cmp [.char_buffer], ' '
   je .end
@@ -243,7 +229,7 @@ parse_number:
   pop rdi
   printlen rdi, [.length]
   newline
-  exit 100
+  sys_terminate 100
 
 segment readable writable
 
