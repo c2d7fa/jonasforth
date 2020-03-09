@@ -119,7 +119,6 @@ uefi_print_string:
 ;; Inputs:
 ;; - RCX = Character buffer (1 byte)
 ;;
-;; [TODO] Show the user's input on screen while they are typing.
 ;; [TODO] Handle enter key correctly (should return '\n').
 uefi_read_char:
   mov r15, rcx
@@ -138,6 +137,11 @@ uefi_read_char:
 
   mov ax, [input_key.UnicodeChar]
   mov [r15], al
+
+  ;; Print the character
+  mov rcx, r15
+  mov rdx, 1
+  call uefi_print_string
 
   ret
 
