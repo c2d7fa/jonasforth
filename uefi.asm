@@ -3,20 +3,6 @@
 format pe64 dll efi
 entry main
 
-;; [TODO] We need to provide the following:
-;; - [X] Print a string of a given length
-;; - [ ] Print a single character
-;; - [ ] Terminate the program (? - What should this do?)
-;; - [X] Read a single character
-;;       - This should allow the user to type in a string, and then feed the
-;;         buffer to us one character at a time.
-;;       - [ ] We want to show the user's input on the screen while reading
-;; - [ ] Read a file that was bundled with the program
-;;       - It looks like we can use EFI_LOAD_FILE_PROTOCOL.LoadFile() to load
-;;         a file into a buffer. In order to be able to use this, we need to
-;;         have some way of interpreting a static buffer instead of reading as
-;;         we go.
-
 ;; EFI struct definitions {{{
 
 EFI_NOT_READY = 0x8000_0000_0000_0000 or 6
@@ -74,25 +60,9 @@ struct EFI_INPUT_KEY
 
 section '.text' code executable readable
 
-main:
+uefi_initialize:
   ; At program startup, RDX contains an EFI_SYSTEM_TABLE*.
   mov [system_table], rdx
-
-  mov rcx, hello_string
-  mov rdx, hello_string.len
-  call print_string
-
-  mov rcx, char_buffer
-  call read_char
-
-  mov rcx, char_buffer
-  mov rdx, 1
-  call print_string
-
-  mov rcx, hello_string
-  mov rdx, hello_string.len
-  call print_string
-
   ret
 
 ;; Print a string of the given length.
@@ -100,7 +70,9 @@ main:
 ;; Inputs:
 ;;  - RCX = String buffer
 ;;  - RDX = String length
-print_string:
+;;
+;; [TODO] Handle newlines correctly. (I.e. translate '\n' to '\r\n'.)
+uefi_print_string:
   mov r8, rcx
   mov r9, rdx
 
@@ -146,13 +118,16 @@ print_string:
 ;;
 ;; Inputs:
 ;; - RCX = Character buffer (1 byte)
-read_char:
+;;
+;; [TODO] Show the user's input on screen while they are typing.
+;; [TODO] Handle enter key correctly (should return '\n').
+uefi_read_char:
   mov r15, rcx
 .read_key:
-  mov rcx, [system_table] ; EFI_SYSTEM_TABLE* rcx
-  mov rcx, [rcx + EFI_SYSTEM_TABLE.ConIn] ; EFI_SIMPLE_TEXT_INPUT_PROTOCOL* rcx
+  mov rcx, [system_table]                                       ; EFI_SYSTEM_TABLE* rcx
+  mov rcx, [rcx + EFI_SYSTEM_TABLE.ConIn]                       ; EFI_SIMPLE_TEXT_INPUT_PROTOCOL* rcx
   mov rbx, [rcx + EFI_SIMPLE_TEXT_INPUT_PROTOCOL.ReadKeyStroke] ; EFI_INPUT_READ_KEY rbx
-  mov rdx, input_key ; EFI_INPUT_KEY* rdx
+  mov rdx, input_key                                            ; EFI_INPUT_KEY* rdx
   sub rsp, 32
   call rbx
   add rsp, 32
@@ -166,14 +141,24 @@ read_char:
 
   ret
 
+;; Terminate with the given error code.
+;;
+;; Inputs:
+;; - RCX = Error code
+uefi_terminate:
+  mov rcx, terminated_msg
+  mov rdx, terminated_msg.len
+  call uefi_print_string
+  jmp $
+
 section '.data' readable writable
 
-system_table dq ?  ; EFI_SYSTEM_TABLE*
+system_table dq ? ; EFI_SYSTEM_TABLE*
 
-hello_string db 'Hello, world!', 0xD, 0xA, 'Here is some more text.', 0xD, 0xA
-.len = $ - hello_string
+terminated_msg db 0xD, 0xA, '(The program has terminated.)', 0xD, 0xA
+.len = $ - terminated_msg
 
-print_string.output_buffer rq 0x400
+uefi_print_string.output_buffer rq 0x400
 
 char_buffer db ?
 

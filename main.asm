@@ -1,6 +1,6 @@
 ;; vim: syntax=fasm
 
-format ELF64 executable
+include "uefi.asm"
 
 ;; "Syscalls" {{{
 
@@ -22,10 +22,15 @@ format ELF64 executable
 ;;
 ;; Clobbers: RAX, RCX, R11, RDI, RSI
 macro sys_print_string {
-  mov rax, 1
-  mov rdi, 1
-  mov rsi, rcx
-  syscall
+  push r8
+  push r9
+  push r10
+
+  call uefi_print_string
+
+  pop r10
+  pop r9
+  pop r8
 }
 
 ;; Read a character from the user into the given buffer.
@@ -38,16 +43,25 @@ macro sys_print_string {
 ;;
 ;; Clobbers: RAX, RCX, R11, RDI, RSI, RDX
 macro sys_read_char {
-  mov rax, 0
-  mov rdi, 0
-  mov rdx, 1
-  syscall
+  push rbx
+  push r8
+  push r9
+  push r10
+  push r15
+
+  mov rcx, rsi
+  call uefi_read_char
+
+  pop r15
+  pop r10
+  pop r9
+  pop r8
+  pop rbx
 }
 
 macro sys_terminate code {
-  mov rax, $3C
-  mov rdi, code
-  syscall
+  mov rax, code
+  call uefi_terminate
 }
 
 ;; }}}
@@ -109,9 +123,7 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
-segment readable executable
-
-entry main
+section '.text' code readable executable
 
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
@@ -119,6 +131,8 @@ include "bootstrap.asm" ; Forth words encoded in Assembly
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
   mov rbp, return_stack_top  ; Initialize return stack
+
+  call uefi_initialize
 
   mov rax, MAIN
   jmp qword [rax]
@@ -597,7 +611,7 @@ forth INPUT_LENGTH, 'INPUT-LENGTH'
   dq LIT, input_buffer_length
   dq EXIT
 
-segment readable writable
+section '.data' readable writable
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
 ;; dictionary. This pointer is updated as new words are added, and its value is
@@ -636,8 +650,6 @@ here_top rq $4000
 ;; Return stack
 rq $2000
 return_stack_top:
-
-segment readable
 
 ;; We store some Forth code in sys.f that defined common words that the user
 ;; would expect to have available at startup. To execute these words, we just
