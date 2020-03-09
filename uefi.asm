@@ -70,37 +70,56 @@ uefi_initialize:
 ;; Inputs:
 ;;  - RCX = String buffer
 ;;  - RDX = String length
-;;
-;; [TODO] Handle newlines correctly. (I.e. translate '\n' to '\r\n'.)
 uefi_print_string:
-  mov r8, rcx
-  mov r9, rdx
+  ;; We take an input string of bytes without any terminator. We need to turn
+  ;; this string into a string of words, terminated by a null character.
 
-  mov r10, r9
-  add r10, r10
+  mov rdi, .output_buffer ; Current location in output string
 
-  ; We take an input string of bytes without any terminator. We need to turn
-  ; this string into a string of words, terminated by a null character.
-  mov rcx, 0
-  mov rsi, 0
 .copy_byte:
-  cmp rcx, r10
+  ;; When there are no characters left in the input string, we are done.
+  cmp rdx, 0
   je .done
 
-  mov al, byte [r8 + rsi]
-  lea rdx, [.output_buffer + rcx]
-  mov byte [rdx], al
-  inc rcx
-  inc rsi
+  ;; Load byte from input string
+  mov al, byte [rcx]
 
-  lea rdx, [.output_buffer + rcx]
-  mov byte [rdx], 0
+  ;; Copy byte to output string
+
+  cmp al, $A
+  jne .not_newline
+.newline:
+  ;; It's a newline; replace it with '\r\n' in output string.
+  mov byte [rdi], $D
+  inc rdi
+  mov byte [rdi], 0
+  inc rdi
+  mov byte [rdi], $A
+  inc rdi
+  mov byte [rdi], 0
+  inc rdi
+  jmp .pop
+
+.not_newline:
+  ;; Not a newline, proceed as normal:
+  mov byte [rdi], al
+  inc rdi
+
+  ;; The output string has words rather than bytes for charactesr, so we need
+  ;; to add an extra zero:
+  mov byte [rdi], 0
+  inc rdi
+
+.pop:
+  ;; We finished copying character to output string, so pop it from the input
+  ;; string.
   inc rcx
+  dec rdx
 
   jmp .copy_byte
 .done:
-  lea rdx, [.output_buffer + r10]
-  mov byte [rdx], 0
+  ;; Append a final null-word:
+  mov word [rdi], 0
 
   ; At this point we have our null-terminated word-string at .output_buffer. Now
   ; we just need to print it.
@@ -118,8 +137,6 @@ uefi_print_string:
 ;;
 ;; Inputs:
 ;; - RCX = Character buffer (1 byte)
-;;
-;; [TODO] Handle enter key correctly (should return '\n').
 uefi_read_char:
   mov r15, rcx
 .read_key:
@@ -137,6 +154,12 @@ uefi_read_char:
 
   mov ax, [input_key.UnicodeChar]
   mov [r15], al
+
+  ;; Special handling of enter (UEFI gives us '\r', but we want '\n'.)
+  cmp ax, $D
+  jne .no_enter
+  mov byte [r15], $A
+.no_enter:
 
   ;; Print the character
   mov rcx, r15
