@@ -1,14 +1,9 @@
 # Building and running
 
-Create the executable:
+Assemble and run the executable:
 
     $ make main
-
-The `sys.f` file contains code that defines some of the usual words that you
-would expect in a Forth distribution. To run this code and then read from
-standard input, run:
-
-    $ cat sys.f - | ./main
+    $ ./main
 
 The `example.f` file contains an example that you can run with:
 
@@ -30,14 +25,15 @@ To run a UEFI shell inside qemu, cd to `uefi/` and run:
 
     $ make run
 
-### Running on read hardware
+### Running on real hardware
 
 * [ ] This is not supported yet
 
 # Notes on implementation
 
-This is my summary of the most important parts of
-https://raw.githubusercontent.com/nornagon/jonesforth/master/jonesforth.S.
+The implementation is based on
+[JONESFORTH](https://raw.githubusercontent.com/nornagon/jonesforth/master/jonesforth.S).
+This is my summary of the most important parts.
 
 ## Dictionary
 
@@ -196,7 +192,11 @@ for more information):
 
     $ qemu-sytem-x86_64 ... -hda fat:/some/directory
 
-We use this to easily test the image in QEMU; see the Makefile for more information.
+We use this to easily test the image in QEMU; see the Makefile for more
+information, or just run the `qemu` target to run the program inside of QEMU
+(of course, you must have QEMU installed for this to work):
+
+    $ make qemu
 
 * [ ] How to build the image for real hardware (what should the image look like,
   which programs, commands, etc.)
@@ -229,7 +229,10 @@ A UEFI images is basically a windows EXE without symbol tables. There are three
 types of UEFI images; we use the EFI application, which has subsystem `10`. It
 is an x68-64 image, which has value `0x8664`.
 
-UEFI applications use [Microsoft's 64-bit calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention) for x68-64 functions. See the linked article for a full description. Here is the short version:
+UEFI applications use [Microsoft's 64-bit calling
+convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention)
+for x68-64 functions. See the linked article for a full description. Here is
+the short version:
 
 * Integer or pointer arguments are given in RCX, RDX, R8 and R9.
 * Additional arguments are pushed onto the stack from right to left.
