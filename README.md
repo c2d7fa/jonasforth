@@ -1,31 +1,27 @@
 # Building and running
 
-Assemble and run the executable:
-
-    $ make main
-    $ ./main
-
-The `example.f` file contains an example that you can run with:
-
-    $ cat sys.f example.f | ./main
-
-## Running with UEFI
-
-We are currently in the process of implementing support for running without
-Linux, by instead relying on UEFI. Eventually, this will be the only supported
-method of running the interpreter, but currently the UEFI-related code is
-isolated in the `uefi/` directory and does not yet contain an implementation of
-the main program.
-
-You should have the following dependencies installed (assuming Arch Linux):
+You can run JONASFORTH inside QEMU or on real hardware. If you want to run
+inside QEMU, you should have the following dependencies installed (assuming
+Arch Linux):
 
     $ pacman -S qemu ovmf
 
-To run a UEFI shell inside qemu, cd to `uefi/` and run:
+Then, to run a UEFI shell inside QEMU, run:
 
-    $ make run
+    $ make qemu
 
-### Running on real hardware
+JONASFORTH will be available as `main` on `FS0:`. Thus, to run it, you can run
+the following command inside the UEFI shell:
+
+    Shell> fs0:main
+    Ready.
+    S" Hello, World!" TELL
+    Hello World!
+
+(Try typing in the code in `example.f` for something a little more
+interesting.)
+
+## Running on real hardware
 
 * [ ] This is not supported yet
 
