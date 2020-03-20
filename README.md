@@ -23,7 +23,32 @@ interesting.)
 
 ## Running on real hardware
 
-* [ ] This is not supported yet
+Making the program run on physical hardware is pretty easy. Just create a
+FAT32-formatted USB drive, and copy `out/main` to it. Then, you can execute the
+program in the same way that you did from inside QEMU, assuming your system
+comes with a UEFI shell built-in.
+
+If your system doesn't have a UEFI shell, then you can copy the executable to
+`\EFI\BOOT\BOOTx64.EFI` on the USB drive. Then, the system should be able to
+boot from the USB drive and directly into JONASFORTH. The way to do this is a
+little bit different depending on the exact firmware, but most firmwares will
+have some way to enter a boot menu where you can select the USB drive. You may
+need to disable Secure Boot first.
+
+To format a USB drive as FAT32, you can run
+
+    # mkfs.vfat -F32 /dev/sdx
+
+with `/dev/sdx` replaced by the path of your USB drive. Then mount the drive,
+and copy `out/main` to `\EFI\BOOT\BOOTx64.EFI`:
+
+    $ mkdir mnt
+    # mount /dev/sdx mnt
+    $ mkdir -p mnt/EFI/BOOT
+    $ make out/main
+    $ cp out/main mnt/EFI/BOOT/BOOTx64.EFI
+
+Now you should be able to boot directly from the USB drive.
 
 # Notes on implementation
 
