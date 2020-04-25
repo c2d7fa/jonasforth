@@ -150,11 +150,11 @@ and then manipulates ESI to skip over the literal value.
 
 ## Built-in variables
 
-* **STATE** -- Is the interpreter executing code (0) or compiling a word (non-zero)?
-* **LATEST** -- Points to the latest (most recently defined) word in the dictionary.
-* **HERE** -- Points to the next free byte of memory.  When compiling, compiled words go here.
-* **S0** -- Stores the address of the top of the parameter stack.
-* **BASE** -- The current base for printing and reading numbers.
+- **STATE** -- Is the interpreter executing code (0) or compiling a word (non-zero)?
+- **LATEST** -- Points to the latest (most recently defined) word in the dictionary.
+- **HERE** -- Points to the next free byte of memory. When compiling, compiled words go here.
+- **S0** -- Stores the address of the top of the parameter stack.
+- **BASE** -- The current base for printing and reading numbers.
 
 ## Input and lookup
 
@@ -201,6 +201,11 @@ provided by UEFI by running as a UEFI application. (Or rather, in the future it
 hopefully will. Right now, it uses Linux.) This section contains some notes
 about how this functionality is implemented.
 
+I also wrote an entire tutorial that descirbes how to write and compile a
+"Hello, World!" UEFI application, including how to run it on real hardware,
+which you can find here: [Getting started with bare-metal
+assembly](https://johv.dk/blog/bare-metal-assembly-tutorial.html).
+
 ## Packaging and testing the image
 
 UEFI expects a UEFI application to be stored in a FAT32 file system on a
@@ -219,26 +224,23 @@ information, or just run the `qemu` target to run the program inside of QEMU
 
     $ make qemu
 
-* [ ] How to build the image for real hardware (what should the image look like,
-  which programs, commands, etc.)
-
 ## Interfacing with UEFI
 
 From [OSDev Wiki](https://wiki.osdev.org/UEFI#How_to_use_UEFI):
 
->Traditional operating systems like Windows and Linux have an existing software
->architecture and a large code base to perform system configuration and device
->discovery. With their sophisticated layers of abstraction they don't directly
->benefit from UEFI. As a result, their UEFI bootloaders do little but prepare
->the environment for them to run.
+> Traditional operating systems like Windows and Linux have an existing software
+> architecture and a large code base to perform system configuration and device
+> discovery. With their sophisticated layers of abstraction they don't directly
+> benefit from UEFI. As a result, their UEFI bootloaders do little but prepare
+> the environment for them to run.
 >
->An independent developer may find more value in using UEFI to write
->feature-full UEFI applications, rather than viewing UEFI as a temporary
->start-up environment to be jettisoned during the boot process. Unlike legacy
->bootloaders, which typically interact with BIOS only enough to bring up the OS,
->a UEFI application can implement sophisticated behavior with the help of UEFI.
->In other words, an independent developer shouldn't be in a rush to leave
->"UEFI-land".
+> An independent developer may find more value in using UEFI to write
+> feature-full UEFI applications, rather than viewing UEFI as a temporary
+> start-up environment to be jettisoned during the boot process. Unlike legacy
+> bootloaders, which typically interact with BIOS only enough to bring up the OS,
+> a UEFI application can implement sophisticated behavior with the help of UEFI.
+> In other words, an independent developer shouldn't be in a rush to leave
+> "UEFI-land".
 
 For `JONASFORTH`, I have decided to run as a UEFI application, taking advantage
 of UEFI's features, including its text I/O features and general graphical device
@@ -255,15 +257,15 @@ convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_
 for x68-64 functions. See the linked article for a full description. Here is
 the short version:
 
-* Integer or pointer arguments are given in RCX, RDX, R8 and R9.
-* Additional arguments are pushed onto the stack from right to left.
-* Integer or pointer values are returned in RAX.
-* An integer-sized struct is passed directly; non-integer-sized structs are passed as pointers.
-* The caller must allocate 32 bytes of "shadow space" on the stack immediately
+- Integer or pointer arguments are given in RCX, RDX, R8 and R9.
+- Additional arguments are pushed onto the stack from right to left.
+- Integer or pointer values are returned in RAX.
+- An integer-sized struct is passed directly; non-integer-sized structs are passed as pointers.
+- The caller must allocate 32 bytes of "shadow space" on the stack immediately
   before calling the function, regardless of the number of parameters used, and
   the caller is responsible for popping the stack afterwards.
-* The following registers are volatile (caller-saved): RAX, RCX, RDX, R8, R9, R10, R11
-* The following registers are nonvolatile (callee-saved): RBX, RBP, RDI, RSI, RSP, R12, R13, R14, R15
+- The following registers are volatile (caller-saved): RAX, RCX, RDX, R8, R9, R10, R11
+- The following registers are nonvolatile (callee-saved): RBX, RBP, RDI, RSI, RSP, R12, R13, R14, R15
 
 When the application is loaded, RCX contains a firmware allocated `EFI_HANDLE`
 for the UEFI image, RDX contains a `EFI_SYSTEM_TABLE*` pointer to the EFI system
@@ -273,9 +275,9 @@ specification as of March 2020 (PDF)](https://uefi.org/sites/default/files/resou
 
 **Sources:**
 
-* [UEFI applications in detail - OSDev Wiki](https://wiki.osdev.org/UEFI#UEFI_applications_in_detail)
-* [Microsoft x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention)
-* [UEFI Specifications](https://uefi.org/specifications)
+- [UEFI applications in detail - OSDev Wiki](https://wiki.osdev.org/UEFI#UEFI_applications_in_detail)
+- [Microsoft x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention)
+- [UEFI Specifications](https://uefi.org/specifications)
 
 ### UEFI with FASM
 
@@ -301,21 +303,21 @@ Use `objdump -x` to inspect the assembled application binary.
 
 ### UEFI documentation
 
-* [Latest specification as of March 2020 (PDF)](https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_A_Feb14.pdf)
+- [Latest specification as of March 2020 (PDF)](https://uefi.org/sites/default/files/resources/UEFI_Spec_2_8_A_Feb14.pdf)
 
 Notable sections:
 
-* 2\. Overview (14)
-* 4\. EFI System Table (89)
-* 7\. Services - Boot Services (140)
-* 8\. Services - Runtime Services (228)
-* 12\. Protocols - Console Support (429)
-* 13\. Protocols - Media Access (493)
-* Appendix B - Console (2201)
-* Appendix D - Status Codes (2211)
+- 2\. Overview (14)
+- 4\. EFI System Table (89)
+- 7\. Services - Boot Services (140)
+- 8\. Services - Runtime Services (228)
+- 12\. Protocols - Console Support (429)
+- 13\. Protocols - Media Access (493)
+- Appendix B - Console (2201)
+- Appendix D - Status Codes (2211)
 
 ## Resources
 
-* [UEFI - OSDev Wiki](https://wiki.osdev.org/UEFI)
-* [Unified Extensible Firmware Interface (Wikipedia)](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface)
-* [UEFI Specifications](https://uefi.org/specifications)
+- [UEFI - OSDev Wiki](https://wiki.osdev.org/UEFI)
+- [Unified Extensible Firmware Interface (Wikipedia)](https://en.wikipedia.org/wiki/Unified_Extensible_Firmware_Interface)
+- [UEFI Specifications](https://uefi.org/specifications)
