@@ -47,7 +47,7 @@ EXIT [
     ELSE
       DROP
     THEN
-  AGAIN ;
+  AGAIN ; ( Yay! We now have comments! )
 
 : UNTIL IMMEDIATE
   ' 0BRANCH ,
@@ -68,6 +68,12 @@ EXIT [
   HERE ! ;
 
 : OVER ( a b -- a b a ) SWAP DUP ROT ;
+
+( An alternative comment syntax. Reads until the end of the line. )
+: \ IMMEDIATE
+  BEGIN
+    KEY
+  10 = UNTIL ;
 
 ( Compile the given string into the current word directly. )
 : STORE-STRING ( str len -- )
