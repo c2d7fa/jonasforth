@@ -160,6 +160,17 @@ forth_asm LIT, 'LIT'
   push rax
   next
 
+;; When LITSTRING is encountered while executing a word, it instead reads a
+;; string from the definition of that word, and places that string on the stack
+;; as (buffer, length).
+forth_asm LITSTRING, 'LITSTRING'
+  lodsb
+  push rsi ; Buffer
+  movzx rax, al
+  push rax ; Length
+  add rsi, rax ; Skip over string before resuming execution
+  next
+
 ;; Given a string (a pointer following by a size), return the location of the
 ;; dictionary entry for that word. If no such word exists, return 0.
 forth_asm FIND, 'FIND'

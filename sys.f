@@ -75,6 +75,21 @@ EXIT [
     KEY
   10 = UNTIL ;
 
+\ So far, S" has only worked in immediate mode, which is backwards -- actually,
+\ the main use-case of this is as a compile-time word. Let's fix that.
+: S" IMMEDIATE
+  ' LITSTRING ,
+  HERE @ 0 C, \ We will put the length here
+  0
+  BEGIN
+    1 +
+    KEY DUP C,
+  34 = UNTIL
+  \ Remove final "
+    HERE @ 1 - HERE !
+    1 -
+  SWAP C! ;
+
 ( Compile the given string into the current word directly. )
 : STORE-STRING ( str len -- )
   BEGIN
@@ -89,7 +104,6 @@ EXIT [
 ( Read a number from standard input. )
 : READ-NUMBER READ-WORD PARSE-NUMBER ;
 
-S" Ready." TELL NEWLINE
+: RESTART S" Ready." TELL NEWLINE ;
+RESTART
 
-( vim: syntax=forth
-)
