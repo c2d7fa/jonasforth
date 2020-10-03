@@ -1,10 +1,10 @@
 # Building and running
 
-You can run JONASFORTH inside QEMU or on real hardware. If you want to run
+You can run Jonasforth inside QEMU or on real hardware. If you want to run
 inside QEMU, you should have the following dependencies installed (assuming
 Arch Linux):
 
-    $ pacman -S qemu ovmf
+    $ pacman -S fasm qemu edk2-ovmf
 
 Then, to run a UEFI shell inside QEMU, run:
 
@@ -88,17 +88,18 @@ The Forth variable LATEST contains a pointer to the most recently defined word.
 
 ## Threaded code
 
-In a typical Forth interpreter, code is stored in a peculiar way. (This way of
-storing code is primarily motivated by space contraints on early systems.)
+In a typical Forth interpreter, code is stored in an unusual format that makes it
+easy to implement an interpreter, and which was also motivated by space
+constraints on early systems.
 
 The definition of a word is stored as a sequence of memory adresses of each of
 the words making up that definition. (At the end of a compiled definition, there
 is also some extra code that causes execution to continue in the correct way.)
 
-We use a register (ESI) to store a reference to the next index of the
+We use a register (RSI) to store a reference to the next index of the
 word (inside a definition) that we are executing. Then, in order to execute a
-word, we just jump to whatever address is pointed to by ESI. The code for
-updating ESI and continuing execution is stored at the end of each subroutine.
+word, we just jump to whatever address is pointed to by RSI. The code for
+updating RSI and continuing execution is stored at the end of each subroutine.
 
 Of course, this approach only works if each of the words that we are executing
 is defined in assembly, but we also want to be able to execute Forth words!
@@ -107,22 +108,22 @@ We get around this problem by adding a "codeword" to the beginning of any
 compiled subroutine. This codeword is a pointer to the intrepreter to run the
 given function. In order to run such functions, we actually need two jumps when
 executing: In order to execute a word, we jump to the address at the location
-pointed to by the address in ESI.
+pointed to by the address in RSI.
 
 ## Definitions
 
 What does the codeword of a Forth word contain? It needs to save the old value
-of ESI (so that we can resume execution of whatever outer definition we are
-executing at the time) and set the new version of ESI to point to the first word
+of RSI (so that we can resume execution of whatever outer definition we are
+executing at the time) and set the new version of RSI to point to the first word
 in the inner definition.
 
-The stack where the values of ESI are stored is called the "return stack". We
-will use EBP for the return stack.
+The stack where the values of RSI are stored is called the "return stack". We
+will use RBP for the return stack.
 
-As mentioned, whenever we finish executing a Forth word, we will need to
-continue execution in the manner described in the previous section. When the
-word being executed is itself written in Forth, we need to pop the old value of
-ESI that we saved at the beginning of the definition before doing this.
+Whenever we finish executing a Forth word, we will need to continue execution
+somewhere else. When the word being executed is itself written in Forth, we need
+to pop the old value of RSI that we saved at the beginning of the definition
+before doing this.
 
 Thus, the actual data for a word in a dictionary will look something like this:
 
@@ -137,7 +138,7 @@ Thus, the actual data for a word in a dictionary will look something like this:
       LINK in next word                            points to codeword of DUP
 
 Here, DOCOL (the codeword) is address of the simple interpreter described above,
-while EXIT a word (implemented in assembly) that takes care of popping ESI and
+while EXIT a word (implemented in assembly) that takes care of popping RSI and
 continuing execution. Note that DOCOL, DUP, + and EXIT are all stored as
 addresses which point to codewords.
 
@@ -145,8 +146,11 @@ addresses which point to codewords.
 
 Literals are handled in a special way. There is a word in Forth, called LIT,
 implemented in assembly. When executed, this word looks at the next Forth
-instruction (i.e. the value of ESI), and places that on the stack as a literal,
-and then manipulates ESI to skip over the literal value.
+instruction (i.e. the value of RSI), and places that on the stack as a literal,
+and then manipulates RSI to skip over the literal value.
+
+When compiling a word, we need to handle the input specially such that literals
+are compiled as `LIT x`.
 
 ## Built-in variables
 
@@ -154,15 +158,15 @@ and then manipulates ESI to skip over the literal value.
 - **LATEST** -- Points to the latest (most recently defined) word in the dictionary.
 - **HERE** -- Points to the next free byte of memory. When compiling, compiled words go here.
 - **S0** -- Stores the address of the top of the parameter stack.
-- **BASE** -- The current base for printing and reading numbers.
+- **BASE** -- The current base (radix) for printing and reading numbers.
 
 ## Input and lookup
 
 `WORD` reads a word from standard input and pushes a string (in the form of an
-address followed by the length of the string) to the stack. (It uses an internal
-buffer that is overwritten each time it is called.)
+address followed by the length of the string) to the stack. The buffer is only
+valid until the next call to `WORD`.
 
-`FIND` takes a word as parsed by `WORD` and looks it up in the dictionary. It
+`FIND` takes a word (as parsed by `WORD`) and looks it up in the dictionary. It
 returns the address of the dictionary header of that word if it is found.
 Otherwise, it returns 0.
 
@@ -171,15 +175,16 @@ compiling.
 
 ## Compilation
 
-The Forth word INTERPRET runs in a loop, reading in words (with WORD), looking
-them up (with FIND), turning them into codeword pointers (with >CFA) and then
-deciding what to do with them.
+The Forth word `INTERPRET` runs in a loop, reading in words (with `WORD`),
+looking them up (with `FIND`), turning them into codeword pointers (with `>CFA`)
+and then deciding what to do with them.
 
-In immediate mode (when STATE is zero), the word is simply executed immediately.
+In immediate mode (when `STATE` is zero), the word is simply executed
+immediately.
 
-In compilation mode, INTERPRET appends the codeword pointer to user memory
-(which is at HERE). However, if a word has the immediate flag set, then it is
-run immediately, even in compile mode.
+In compilation mode, `INTERPRET` appends the codeword pointer to user memory
+(which is at HERE). However, if a word has the immediate flag set, then it is run
+immediately, even in compile mode.
 
 ### Definition of `:` and `;`
 
@@ -196,10 +201,9 @@ pointer forward.
 
 # Notes on UEFI
 
-`JONASFORTH` is runs without an operating system, instead using the facilities
-provided by UEFI by running as a UEFI application. (Or rather, in the future it
-hopefully will. Right now, it uses Linux.) This section contains some notes
-about how this functionality is implemented.
+Jonasforth runs without an underlying operating system, instead using the
+facilities provided by UEFI by running as a UEFI application. This section
+contains some notes about how this functionality is implemented.
 
 I also wrote an entire tutorial that descirbes how to write and compile a
 "Hello, World!" UEFI application, including how to run it on real hardware,
