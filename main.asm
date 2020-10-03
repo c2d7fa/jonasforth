@@ -1,18 +1,6 @@
 ;; vim: syntax=fasm
 
-include "uefi.asm"
-
-;; "Syscalls" {{{
-
-;; [NOTE] Volatile registers Linux (syscalls) vs UEFI
-;;
-;;   Linux syscalls: RAX, RCX, R11
-;;   UEFI:           RAX, RCX, R11, RDX, R8, R9, R10
-
-;; We are in the process of replacing our dependency on Linux with a dependency
-;; on UEFI. The following macros attempt to isolate what would be syscalls in
-;; Linux; thus, we will be able to replace these with UEFI-based implementations,
-;; and in theory we should expect the program to work.
+include '%OS_INCLUDE%'
 
 ;; Print a string of a given length.
 ;;
@@ -63,8 +51,6 @@ macro sys_terminate code {
   mov rax, code
   call uefi_terminate
 }
-
-;; }}}
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
