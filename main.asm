@@ -1,5 +1,24 @@
 ;; vim: syntax=fasm
 
+;; At compile-time we load the module given by the environment variable
+;; OS_INCLUDE. This module should define the following macros:
+;;
+;; Each of these functions should preserve the value of RSI and RSP. They may
+;; use other registers as they like.
+;;
+;; os_initialize
+;;   Called at initialization.
+;;
+;; os_print_string
+;;   Takes a string buffer in RCX and the length in RDX, and prints the string
+;;   to the console.
+;;
+;; os_read_char
+;;   Wait for the user to type a key, and then put the corresponding ASCII byte
+;;   into the buffer pointed to by RCX.
+;;
+;; os_terminate
+;;   Shut down the system.
 include '%OS_INCLUDE%'
 
 ;; Print a string of a given length.
@@ -14,7 +33,7 @@ macro sys_print_string {
   push r9
   push r10
 
-  call uefi_print_string
+  call os_print_string
 
   pop r10
   pop r9
@@ -38,7 +57,7 @@ macro sys_read_char {
   push r15
 
   mov rcx, rsi
-  call uefi_read_char
+  call os_read_char
 
   pop r15
   pop r10
@@ -49,7 +68,7 @@ macro sys_read_char {
 
 macro sys_terminate code {
   mov rax, code
-  call uefi_terminate
+  call os_terminate
 }
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
@@ -118,7 +137,7 @@ main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
   mov rbp, return_stack_top  ; Initialize return stack
 
-  call uefi_initialize
+  call os_initialize
 
   mov rax, MAIN
   jmp qword [rax]

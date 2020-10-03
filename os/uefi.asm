@@ -60,17 +60,12 @@ struct EFI_INPUT_KEY
 
 section '.text' code executable readable
 
-uefi_initialize:
+os_initialize:
   ; At program startup, RDX contains an EFI_SYSTEM_TABLE*.
   mov [system_table], rdx
   ret
 
-;; Print a string of the given length.
-;;
-;; Inputs:
-;;  - RCX = String buffer
-;;  - RDX = String length
-uefi_print_string:
+os_print_string:
   ;; We take an input string of bytes without any terminator. We need to turn
   ;; this string into a string of words, terminated by a null character.
 
@@ -133,11 +128,7 @@ uefi_print_string:
   add rsp, 32
   ret
 
-;; Read a character as an ASCII byte into the given buffer.
-;;
-;; Inputs:
-;; - RCX = Character buffer (1 byte)
-uefi_read_char:
+os_read_char:
   mov r15, rcx
 .read_key:
   mov rcx, [system_table]                                       ; EFI_SYSTEM_TABLE* rcx
@@ -164,7 +155,7 @@ uefi_read_char:
   ;; Print the character
   mov rcx, r15
   mov rdx, 1
-  call uefi_print_string
+  call os_print_string
 
   ret
 
@@ -172,10 +163,10 @@ uefi_read_char:
 ;;
 ;; Inputs:
 ;; - RCX = Error code
-uefi_terminate:
+os_terminate:
   mov rcx, terminated_msg
   mov rdx, terminated_msg.len
-  call uefi_print_string
+  call os_print_string
   jmp $
 
 section '.data' readable writable
@@ -185,7 +176,7 @@ system_table dq ? ; EFI_SYSTEM_TABLE*
 terminated_msg db 0xD, 0xA, '(The program has terminated.)', 0xD, 0xA
 .len = $ - terminated_msg
 
-uefi_print_string.output_buffer rq 0x400
+os_print_string.output_buffer rq 0x400
 
 char_buffer db ?
 
