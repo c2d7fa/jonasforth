@@ -69,52 +69,6 @@ find:
 .found:
   ret
 
-;; Read a word from standard input. Returns pointer to string containing word as
-;; well as length.
-;;
-;; Results:
-;;   * rdx = Length of string
-;;   * rdi = Pointer to string buffer
-;;
-;; Clobbers pretty much everything.
-read_word:
-.skip_whitespace:
-  ;; Read characters into .char_buffer until one of them is not whitespace.
-  mov rsi, .char_buffer
-  sys_read_char
-
-  ;; We consider newlines and spaces to be whitespace.
-  cmp [.char_buffer], ' '
-  je .skip_whitespace
-  cmp [.char_buffer], $A
-  je .skip_whitespace
-
-.alpha:
-  ;; We got a character that wasn't whitespace. Now read the actual word.
-  mov [.length], 0
-
-.read_alpha:
-  mov al, [.char_buffer]
-  movzx rbx, [.length]
-  mov rsi, .buffer
-  add rsi, rbx
-  mov [rsi], al
-  inc [.length]
-
-  mov rsi, .char_buffer
-  sys_read_char
-
-  cmp [.char_buffer], ' '
-  je .end
-  cmp [.char_buffer], $A
-  jne .read_alpha
-
-.end:
-  mov rdi, .buffer
-  movzx rdx, [.length]
-
-  ret
-
 ;; Read a word from a buffer. Returns the buffer without the word, as well as
 ;; the word that was read (including lengths).
 ;;
@@ -235,11 +189,6 @@ section '.data' readable writable
 
 find.search_length dq ?
 find.search_buffer dq ?
-
-read_word.max_size = $FF
-read_word.buffer rb read_word.max_size
-read_word.length db ?
-read_word.char_buffer db ?
 
 parse_number.length dq ?
 parse_number.error_msg string "Invalid number: "

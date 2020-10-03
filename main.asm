@@ -231,38 +231,77 @@ forth_asm EMIT, 'EMIT'
   popr rsi
   next
 
-;; Read a word and push it onto the stack as a pointer and a size. The pointer
-;; is valid until the next call to READ_WORD.
-forth_asm READ_WORD, 'READ-WORD'
+;; Read a single character from the current input stream. Usually, this will wait
+;; for the user to press a key, and then return the corresponding character. When
+;; reading from a special buffer, it will instead return the next characater from
+;; that buffer.
+;;
+;; The ASCII character code is placed on the stack.
+forth_asm KEY, 'KEY'
+  call .impl
+  push rax
+  next
+
+;; Result in RAX
+.impl:
   ;; Are we reading from user input or from the input buffer?
   cmp [input_buffer], 0
   jne .from_buffer
 
   ;; Reading user input
-  mov [.rsi], rsi
+  push rsi
+  mov rsi, .buffer
+  sys_read_char
+  pop rsi
 
-  call read_word
-  push rdi                      ; Buffer
-  push rdx                      ; Length
-
-  mov rsi, [.rsi]
-  next
+  movzx rax, byte [.buffer]
+  ret
 
 .from_buffer:
   ;; Reading from buffer
-  mov [.rsi], rsi
+  mov rax, [input_buffer]
+  movzx rax, byte [rax]
 
-  mov rsi, [input_buffer]
-  mov rcx, [input_buffer_length]
+  inc [input_buffer]
+  dec [input_buffer_length]
+  ret
 
-  call pop_word
+;; Read a word and push it onto the stack as a pointer and a size. The pointer
+;; is valid until the next call to READ_WORD.
+forth_asm READ_WORD, 'READ-WORD'
+  push rsi
+.skip_whitespace:
+  ;; Read characters until one of them is not whitespace.
+  call KEY.impl
+  ;; We consider newlines and spaces to be whitespace.
+  cmp al, ' '
+  je .skip_whitespace
+  cmp al, $A
+  je .skip_whitespace
 
-  mov [input_buffer], rsi        ; Updated buffer
-  mov [input_buffer_length], rcx ; Length of updated buffer
-  push rdi                       ; Word buffer
-  push rdx                       ; Length of word buffer
+  ;; We got a character that wasn't whitespace. Now read the actual word.
+  mov [.length], 0
 
-  mov rsi, [.rsi]
+.read_alpha:
+  movzx rbx, [.length]
+  mov rsi, .buffer
+  add rsi, rbx
+  mov [rsi], al
+  inc [.length]
+
+  call KEY.impl
+
+  cmp al, ' '
+  je .end
+  cmp al, $A
+  jne .read_alpha
+
+.end:
+  pop rsi
+  push .buffer
+  movzx rax, [.length]
+  push rax
+
   next
 
 ;; Takes a string on the stack and replaces it with the decimal number that the
@@ -642,6 +681,11 @@ DOTU.buffer rq 16               ; 64-bit number has no more than 16 digits in he
 DOTU.rbuffer rq 16
 DOTU.length dq ?
 DOTU.printed_length dq ?
+
+KEY.buffer dq ?
+
+READ_WORD.buffer rb $FF
+READ_WORD.length db ?
 
 ;; Reserve space for compiled words, accessed through HERE.
 here dq here_top
