@@ -84,10 +84,10 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
-os_code_section
-
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
+
+os_code_section
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
