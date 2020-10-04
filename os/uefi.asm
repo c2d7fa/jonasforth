@@ -58,19 +58,22 @@ struct EFI_INPUT_KEY
 
 ;; }}}
 
+macro os_code_section {
+  section '.text' code readable executable
+}
+
+macro os_data_section {
+  section '.data' readable writable
+}
+
 section '.text' code executable readable
 
-uefi_initialize:
+os_initialize:
   ; At program startup, RDX contains an EFI_SYSTEM_TABLE*.
   mov [system_table], rdx
   ret
 
-;; Print a string of the given length.
-;;
-;; Inputs:
-;;  - RCX = String buffer
-;;  - RDX = String length
-uefi_print_string:
+os_print_string:
   ;; We take an input string of bytes without any terminator. We need to turn
   ;; this string into a string of words, terminated by a null character.
 
@@ -133,12 +136,7 @@ uefi_print_string:
   add rsp, 32
   ret
 
-;; Read a character as an ASCII byte into the given buffer.
-;;
-;; Inputs:
-;; - RCX = Character buffer (1 byte)
-uefi_read_char:
-  mov r15, rcx
+os_read_char:
 .read_key:
   mov rcx, [system_table]                                       ; EFI_SYSTEM_TABLE* rcx
   mov rcx, [rcx + EFI_SYSTEM_TABLE.ConIn]                       ; EFI_SIMPLE_TEXT_INPUT_PROTOCOL* rcx
@@ -152,19 +150,21 @@ uefi_read_char:
   cmp rax, r8
   je .read_key
 
-  mov ax, [input_key.UnicodeChar]
-  mov [r15], al
+  movzx rax, word [input_key.UnicodeChar]
 
   ;; Special handling of enter (UEFI gives us '\r', but we want '\n'.)
   cmp ax, $D
   jne .no_enter
-  mov byte [r15], $A
+  mov al, $A
 .no_enter:
 
+  push rax
   ;; Print the character
-  mov rcx, r15
+  mov [char_buffer], al
+  mov rcx, char_buffer
   mov rdx, 1
-  call uefi_print_string
+  call os_print_string
+  pop rax
 
   ret
 
@@ -172,10 +172,10 @@ uefi_read_char:
 ;;
 ;; Inputs:
 ;; - RCX = Error code
-uefi_terminate:
+os_terminate:
   mov rcx, terminated_msg
   mov rdx, terminated_msg.len
-  call uefi_print_string
+  call os_print_string
   jmp $
 
 section '.data' readable writable
@@ -185,7 +185,7 @@ system_table dq ? ; EFI_SYSTEM_TABLE*
 terminated_msg db 0xD, 0xA, '(The program has terminated.)', 0xD, 0xA
 .len = $ - terminated_msg
 
-uefi_print_string.output_buffer rq 0x400
+os_print_string.output_buffer rq 0x400
 
 char_buffer db ?
 

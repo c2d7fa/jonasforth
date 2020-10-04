@@ -1,70 +1,31 @@
 ;; vim: syntax=fasm
 
-include "uefi.asm"
-
-;; "Syscalls" {{{
-
-;; [NOTE] Volatile registers Linux (syscalls) vs UEFI
+;; At compile-time we load the module given by the environment variable
+;; OS_INCLUDE. All of the following these procedures should preserve the value
+;; of RSI and RSP. They may use other registers as they like.
 ;;
-;;   Linux syscalls: RAX, RCX, R11
-;;   UEFI:           RAX, RCX, R11, RDX, R8, R9, R10
-
-;; We are in the process of replacing our dependency on Linux with a dependency
-;; on UEFI. The following macros attempt to isolate what would be syscalls in
-;; Linux; thus, we will be able to replace these with UEFI-based implementations,
-;; and in theory we should expect the program to work.
-
-;; Print a string of a given length.
+;; The module should provide the following:
 ;;
-;; Input:
-;; - RCX = Pointer to buffer
-;; - RDX = Buffer length
+;; os_code_section
+;;   Macro to start the text segment.
 ;;
-;; Clobbers: RAX, RCX, R11, RDI, RSI
-macro sys_print_string {
-  push r8
-  push r9
-  push r10
-
-  call uefi_print_string
-
-  pop r10
-  pop r9
-  pop r8
-}
-
-;; Read a character from the user into the given buffer.
+;; os_data_section
+;;   Macro to start the data segment.
 ;;
-;; Input:
-;; - RSI = Character buffer
+;; os_initialize
+;;   Called at initialization.
 ;;
-;; Output:
-;; - BYTE [RSI] = Character
+;; os_print_string
+;;   Takes a string buffer in RCX and the length in RDX, and prints the string
+;;   to the console.
 ;;
-;; Clobbers: RAX, RCX, R11, RDI, RSI, RDX
-macro sys_read_char {
-  push rbx
-  push r8
-  push r9
-  push r10
-  push r15
-
-  mov rcx, rsi
-  call uefi_read_char
-
-  pop r15
-  pop r10
-  pop r9
-  pop r8
-  pop rbx
-}
-
-macro sys_terminate code {
-  mov rax, code
-  call uefi_terminate
-}
-
-;; }}}
+;; os_read_char
+;;   Wait for the user to type a key, and then put the corresponding ASCII byte
+;;   into RAX.
+;;
+;; os_terminate
+;;   Shut down the system, returning the error code given in RAX.
+include '%OS_INCLUDE%'
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
@@ -123,16 +84,16 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
-section '.text' code readable executable
-
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
+
+os_code_section
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
   mov rbp, return_stack_top  ; Initialize return stack
 
-  call uefi_initialize
+  call os_initialize
 
   mov rax, MAIN
   jmp qword [rax]
@@ -235,7 +196,7 @@ forth_asm EMIT, 'EMIT'
 
   lea rcx, [rsp]
   mov rdx, 1
-  sys_print_string
+  call os_print_string
 
   add rsp, 8
   popr rax
@@ -260,12 +221,7 @@ forth_asm KEY, 'KEY'
   jne .from_buffer
 
   ;; Reading user input
-  push rsi
-  mov rsi, .buffer
-  sys_read_char
-  pop rsi
-
-  movzx rax, byte [.buffer]
+  call os_read_char
   ret
 
 .from_buffer:
@@ -336,7 +292,7 @@ forth_asm TELL, 'TELL'
 
   pop rdx ; Length
   pop rcx ; Buffer
-  sys_print_string
+  call os_print_string
 
   popr rsi
   popr rax
@@ -344,7 +300,8 @@ forth_asm TELL, 'TELL'
 
 ;; Exit the program cleanly.
 forth_asm TERMINATE, 'TERMINATE'
-  sys_terminate 0
+  mov rax, 0
+  call os_terminate
 
 ;; Duplicate a pair of elements.
 forth_asm PAIRDUP, '2DUP'
@@ -433,7 +390,7 @@ forth_asm DOTU, '.U'
   ;; Print the buffer
   mov rcx, .buffer
   mov rdx, [.printed_length]
-  sys_print_string
+  call os_print_string
 
   ;; Restore RSI and continue execution
   pop rsi
@@ -506,10 +463,7 @@ forth_asm READ_STRING, 'S"'
   mov [.length], 0
 
 .read_char:
-  mov rsi, .char_buffer
-  sys_read_char
-
-  mov al, [.char_buffer]
+  call os_read_char
   cmp al, '"'
   je .done
 
@@ -661,7 +615,7 @@ forth INPUT_LENGTH, 'INPUT-LENGTH'
   dq LIT, input_buffer_length
   dq EXIT
 
-section '.data' readable writable
+os_data_section
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
 ;; dictionary. This pointer is updated as new words are added, and its value is
@@ -709,6 +663,8 @@ return_stack_top:
 ;; We store some Forth code in sys.f that defined common words that the user
 ;; would expect to have available at startup. To execute these words, we just
 ;; include the file directly in the binary, and then interpret it at startup.
-sysf file 'sys.f'
+sysf:
+file 'sys.f'
+file 'example.f'
 sysf.len = $ - sysf
 

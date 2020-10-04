@@ -14,9 +14,12 @@ OVMF_CODE.fd: /usr/share/ovmf/x64/OVMF_CODE.fd
 OVMF_VARS.fd: /usr/share/ovmf/x64/OVMF_VARS.fd
 	cp $< $@
 
-out/main: main.asm impl.asm bootstrap.asm sys.f uefi.asm
+out/main: main.asm impl.asm bootstrap.asm sys.f os/uefi.asm
 	mkdir -p out
-	fasm $< out/main
+	OS_INCLUDE=os/uefi.asm fasm $< $@
+
+main: main.asm impl.asm bootstrap.asm sys.f os/linux.asm
+	OS_INCLUDE=os/linux.asm fasm $< $@
 
 .PHONY: clean
 clean:
