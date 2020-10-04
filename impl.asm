@@ -1,6 +1,4 @@
-;; vim: syntax=fasm
-
-section '.text' code readable executable
+os_code_section
 
 macro printlen msg, len {
   push rsi
@@ -186,7 +184,7 @@ parse_number:
   mov rax, 100
   call os_terminate
 
-section '.data' readable writable
+os_data_section
 
 find.search_length dq ?
 find.search_buffer dq ?

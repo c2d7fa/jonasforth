@@ -58,6 +58,14 @@ struct EFI_INPUT_KEY
 
 ;; }}}
 
+macro os_code_section {
+  section '.text' code readable executable
+}
+
+macro os_data_section {
+  section '.data' readable writable
+}
+
 section '.text' code executable readable
 
 os_initialize:

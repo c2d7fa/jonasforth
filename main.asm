@@ -1,10 +1,16 @@
 ;; vim: syntax=fasm
 
 ;; At compile-time we load the module given by the environment variable
-;; OS_INCLUDE. This module should define the following macros:
+;; OS_INCLUDE. All of the following these procedures should preserve the value
+;; of RSI and RSP. They may use other registers as they like.
 ;;
-;; Each of these functions should preserve the value of RSI and RSP. They may
-;; use other registers as they like.
+;; The module should provide the following:
+;;
+;; os_code_section
+;;   Macro to start the text segment.
+;;
+;; os_data_section
+;;   Macro to start the data segment.
 ;;
 ;; os_initialize
 ;;   Called at initialization.
@@ -78,7 +84,7 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
-section '.text' code readable executable
+os_code_section
 
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
@@ -609,7 +615,7 @@ forth INPUT_LENGTH, 'INPUT-LENGTH'
   dq LIT, input_buffer_length
   dq EXIT
 
-section '.data' readable writable
+os_data_section
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
 ;; dictionary. This pointer is updated as new words are added, and its value is
@@ -657,6 +663,8 @@ return_stack_top:
 ;; We store some Forth code in sys.f that defined common words that the user
 ;; would expect to have available at startup. To execute these words, we just
 ;; include the file directly in the binary, and then interpret it at startup.
-sysf file 'sys.f'
+sysf:
+file 'sys.f'
+file 'example.f'
 sysf.len = $ - sysf
 

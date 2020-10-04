@@ -18,6 +18,9 @@ out/main: main.asm impl.asm bootstrap.asm sys.f os/uefi.asm
 	mkdir -p out
 	OS_INCLUDE=os/uefi.asm fasm $< $@
 
+main: main.asm impl.asm bootstrap.asm sys.f os/linux.asm
+	OS_INCLUDE=os/linux.asm fasm $< $@
+
 .PHONY: clean
 clean:
 	rm -rf out OVMF_CODE.fd OVMF_VARS.fd
