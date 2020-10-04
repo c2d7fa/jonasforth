@@ -8,7 +8,7 @@ macro printlen msg, len {
 
   mov rcx, msg
   mov rdx, len
-  sys_print_string
+  call os_print_string
 
   sub rsp, 8
   pop rsi
@@ -183,7 +183,8 @@ parse_number:
   pop rdi
   printlen rdi, [.length]
   newline
-  sys_terminate 100
+  mov rax, 100
+  call os_terminate
 
 section '.data' readable writable
 

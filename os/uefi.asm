@@ -129,7 +129,6 @@ os_print_string:
   ret
 
 os_read_char:
-  mov r15, rcx
 .read_key:
   mov rcx, [system_table]                                       ; EFI_SYSTEM_TABLE* rcx
   mov rcx, [rcx + EFI_SYSTEM_TABLE.ConIn]                       ; EFI_SIMPLE_TEXT_INPUT_PROTOCOL* rcx
@@ -143,19 +142,21 @@ os_read_char:
   cmp rax, r8
   je .read_key
 
-  mov ax, [input_key.UnicodeChar]
-  mov [r15], al
+  movzx rax, word [input_key.UnicodeChar]
 
   ;; Special handling of enter (UEFI gives us '\r', but we want '\n'.)
   cmp ax, $D
   jne .no_enter
-  mov byte [r15], $A
+  mov al, $A
 .no_enter:
 
+  push rax
   ;; Print the character
-  mov rcx, r15
+  mov [char_buffer], al
+  mov rcx, char_buffer
   mov rdx, 1
   call os_print_string
+  pop rax
 
   ret
 
