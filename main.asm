@@ -599,13 +599,55 @@ forth_asm EFICALL2, 'EFICALL2'
   pop rdx ; 2nd argument
   pop rcx ; 1st argument
 
-  push rsi
+  sub rsp, 32
+  call rax
+  add rsp, 32
+
+  next
+
+forth_asm EFICALL3, 'EFICALL3'
+  pop rax ; function pointer
+  pop r8  ; 3rd argument
+  pop rdx ; 2nd argument
+  pop rcx ; 1st argument
 
   sub rsp, 32
   call rax
   add rsp, 32
 
-  pop rsi
+  push rax
+
+  next
+
+forth_asm EFICALL10, 'EFICALL10'
+  pop rax ; function pointer
+
+  mov rcx, [rsp + 8 * 9]
+  mov rdx, [rsp + 8 * 8]
+  mov r8, [rsp + 8 * 7]
+  mov r9, [rsp + 8 * 6]
+
+  ;; Reverse order of stack arguments
+  mov r10, [rsp + 8 * 5]
+  mov r11, [rsp + 8 * 0]
+  mov [rsp + 8 * 5], r11
+  mov [rsp + 8 * 0], r10
+
+  mov r10, [rsp + 8 * 4]
+  mov r11, [rsp + 8 * 1]
+  mov [rsp + 8 * 4], r11
+  mov [rsp + 8 * 1], r10
+
+  mov r10, [rsp + 8 * 3]
+  mov r11, [rsp + 8 * 2]
+  mov [rsp + 8 * 3], r11
+  mov [rsp + 8 * 2], r10
+
+  sub rsp, 32
+  call rax
+  add rsp, 32 + 8 * 10
+
+  push rax
 
   next
 
