@@ -588,6 +588,27 @@ forth MAIN, 'MAIN'
   dq BRANCH, -8 * 2
   dq TERMINATE
 
+;; EFI:
+
+forth EFI_SYSTEM_TABLE_CONSTANT, 'SystemTable'
+  dq LIT, system_table, GET
+  dq EXIT
+
+forth_asm EFICALL2, 'EFICALL2'
+  pop rax ; function pointer
+  pop rdx ; 2nd argument
+  pop rcx ; 1st argument
+
+  push rsi
+
+  sub rsp, 32
+  call rax
+  add rsp, 32
+
+  pop rsi
+
+  next
+
 ;; Built-in variables:
 
 forth STATE, 'STATE'
@@ -665,6 +686,6 @@ return_stack_top:
 ;; include the file directly in the binary, and then interpret it at startup.
 sysf:
 file 'sys.f'
-file 'example.f'
+file 'uefi.f'
 sysf.len = $ - sysf
 
