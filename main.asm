@@ -1,16 +1,5 @@
-;; vim: syntax=fasm
-
-;; At compile-time we load the module given by the environment variable
-;; OS_INCLUDE. All of the following these procedures should preserve the value
-;; of RSI and RSP. They may use other registers as they like.
-;;
-;; The module should provide the following:
-;;
-;; os_code_section
-;;   Macro to start the text segment.
-;;
-;; os_data_section
-;;   Macro to start the data segment.
+;; The UEFI module defines the following functions. Each of these functions
+;; preserve the value of RSI and RSP. They may use other registers as they like.
 ;;
 ;; os_initialize
 ;;   Called at initialization.
@@ -25,7 +14,7 @@
 ;;
 ;; os_terminate
 ;;   Shut down the system, returning the error code given in RAX.
-include '%OS_INCLUDE%'
+include 'os/uefi.asm'
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
@@ -84,10 +73,10 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
+section '.text' code readable executable
+
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
-
-os_code_section
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
@@ -678,7 +667,7 @@ forth INPUT_LENGTH, 'INPUT-LENGTH'
   dq LIT, input_buffer_length
   dq EXIT
 
-os_data_section
+section '.data' readable writable
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
 ;; dictionary. This pointer is updated as new words are added, and its value is

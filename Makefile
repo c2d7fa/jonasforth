@@ -22,9 +22,6 @@ out/startup.nsh:
 	mkdir -p out
 	echo 'fs0:main' >out/startup.nsh
 
-main: main.asm impl.asm bootstrap.asm sys.f os/linux.asm
-	OS_INCLUDE=os/linux.asm fasm $< $@
-
 .PHONY: clean
 clean:
 	rm -rf out OVMF_CODE.fd OVMF_VARS.fd
