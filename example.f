@@ -17,5 +17,17 @@
   10 FIB .U
   SPACE S" (Expected: 59)" TELL NEWLINE ;
 
+\ This example calls the Blt() function on UEFI's Graphics Output Protocol. See
+\ the UEFI specification and uefi.f for more information.
+: BLUE-SQUARE
+  GraphicsOutputProtocol
+  HERE @ 255 C, 0 C, 0 C, 0 C, \ Buffer with single blue pixel
+  EfiBltVideoFill
+  0 0 \ Source
+  100 100 20 20 \ Destination
+  0
+  GOP.Blt() ;
+
 HELLO
 TEST-FIB
+BLUE-SQUARE

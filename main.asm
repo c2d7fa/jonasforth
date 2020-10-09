@@ -1,16 +1,5 @@
-;; vim: syntax=fasm
-
-;; At compile-time we load the module given by the environment variable
-;; OS_INCLUDE. All of the following these procedures should preserve the value
-;; of RSI and RSP. They may use other registers as they like.
-;;
-;; The module should provide the following:
-;;
-;; os_code_section
-;;   Macro to start the text segment.
-;;
-;; os_data_section
-;;   Macro to start the data segment.
+;; The UEFI module defines the following functions. Each of these functions
+;; preserve the value of RSI and RSP. They may use other registers as they like.
 ;;
 ;; os_initialize
 ;;   Called at initialization.
@@ -25,7 +14,7 @@
 ;;
 ;; os_terminate
 ;;   Shut down the system, returning the error code given in RAX.
-include '%OS_INCLUDE%'
+include 'os/uefi.asm'
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
@@ -84,10 +73,10 @@ macro forth_asm label, name, immediate {
 .start:
 }
 
+section '.text' code readable executable
+
 include "impl.asm"      ; Misc. subroutines
 include "bootstrap.asm" ; Forth words encoded in Assembly
-
-os_code_section
 
 main:
   cld                        ; Clear direction flag so LODSQ does the right thing.
@@ -588,6 +577,69 @@ forth MAIN, 'MAIN'
   dq BRANCH, -8 * 2
   dq TERMINATE
 
+;; EFI:
+
+forth EFI_SYSTEM_TABLE_CONSTANT, 'SystemTable'
+  dq LIT, system_table, GET
+  dq EXIT
+
+forth_asm EFICALL2, 'EFICALL2'
+  pop rax ; function pointer
+  pop rdx ; 2nd argument
+  pop rcx ; 1st argument
+
+  sub rsp, 32
+  call rax
+  add rsp, 32
+
+  next
+
+forth_asm EFICALL3, 'EFICALL3'
+  pop rax ; function pointer
+  pop r8  ; 3rd argument
+  pop rdx ; 2nd argument
+  pop rcx ; 1st argument
+
+  sub rsp, 32
+  call rax
+  add rsp, 32
+
+  push rax
+
+  next
+
+forth_asm EFICALL10, 'EFICALL10'
+  pop rax ; function pointer
+
+  mov rcx, [rsp + 8 * 9]
+  mov rdx, [rsp + 8 * 8]
+  mov r8, [rsp + 8 * 7]
+  mov r9, [rsp + 8 * 6]
+
+  ;; Reverse order of stack arguments
+  mov r10, [rsp + 8 * 5]
+  mov r11, [rsp + 8 * 0]
+  mov [rsp + 8 * 5], r11
+  mov [rsp + 8 * 0], r10
+
+  mov r10, [rsp + 8 * 4]
+  mov r11, [rsp + 8 * 1]
+  mov [rsp + 8 * 4], r11
+  mov [rsp + 8 * 1], r10
+
+  mov r10, [rsp + 8 * 3]
+  mov r11, [rsp + 8 * 2]
+  mov [rsp + 8 * 3], r11
+  mov [rsp + 8 * 2], r10
+
+  sub rsp, 32
+  call rax
+  add rsp, 32 + 8 * 10
+
+  push rax
+
+  next
+
 ;; Built-in variables:
 
 forth STATE, 'STATE'
@@ -615,7 +667,7 @@ forth INPUT_LENGTH, 'INPUT-LENGTH'
   dq LIT, input_buffer_length
   dq EXIT
 
-os_data_section
+section '.data' readable writable
 
 ;; The LATEST variable holds a pointer to the word that was last added to the
 ;; dictionary. This pointer is updated as new words are added, and its value is
@@ -665,6 +717,6 @@ return_stack_top:
 ;; include the file directly in the binary, and then interpret it at startup.
 sysf:
 file 'sys.f'
-file 'example.f'
+file 'uefi.f'
 sysf.len = $ - sysf
 
