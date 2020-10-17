@@ -15,10 +15,11 @@ the following command inside the UEFI shell:
 
     Shell> fs0:main
     Ready.
-    S" Hello, World!" TELL
+    : SAY-HELLO S" Hello, World!" TELL NEWLINE ;
+    SAY-HELLO
     Hello World!
 
-(Try typing in the code in `example.f` for something a little more
+(Try typing in the code in `lib/example.f` for something a little more
 interesting.)
 
 ## Running on real hardware

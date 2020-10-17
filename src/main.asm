@@ -716,7 +716,7 @@ return_stack_top:
 ;; would expect to have available at startup. To execute these words, we just
 ;; include the file directly in the binary, and then interpret it at startup.
 sysf:
-file 'sys.f'
-file 'uefi.f'
+file '../init/sys.f'
+file '../init/uefi.f'
 sysf.len = $ - sysf
 

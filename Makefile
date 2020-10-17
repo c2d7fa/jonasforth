@@ -14,9 +14,9 @@ OVMF_CODE.fd: /usr/share/ovmf/x64/OVMF_CODE.fd
 OVMF_VARS.fd: /usr/share/ovmf/x64/OVMF_VARS.fd
 	cp $< $@
 
-out/main: main.asm impl.asm bootstrap.asm sys.f os/uefi.asm
+out/main: src/main.asm src/impl.asm src/bootstrap.asm src/uefi.asm init/sys.f init/uefi.f
 	mkdir -p out
-	OS_INCLUDE=os/uefi.asm fasm $< $@
+	fasm $< $@
 
 out/startup.nsh:
 	mkdir -p out
