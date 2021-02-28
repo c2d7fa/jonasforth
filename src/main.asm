@@ -14,7 +14,7 @@
 ;;
 ;; os_terminate
 ;;   Shut down the system, returning the error code given in RAX.
-include 'os/uefi.asm'
+include 'src/uefi.asm'
 
 ;; The code in this macro is placed at the end of each Forth word. When we are
 ;; executing a definition, this code is what causes execution to resume at the
